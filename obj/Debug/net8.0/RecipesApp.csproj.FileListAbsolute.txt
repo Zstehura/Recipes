@@ -126,3 +126,4 @@ C:\Users\zacks\OneDrive\Documents\Cursor Projects\Recipes\obj\Debug\net8.0\refin
 C:\Users\zacks\OneDrive\Documents\Cursor Projects\Recipes\obj\Debug\net8.0\RecipesApp.pdb
 C:\Users\zacks\OneDrive\Documents\Cursor Projects\Recipes\obj\Debug\net8.0\RecipesApp.genruntimeconfig.cache
 C:\Users\zacks\OneDrive\Documents\Cursor Projects\Recipes\obj\Debug\net8.0\ref\RecipesApp.dll
+C:\Users\zacks\OneDrive\Documents\Cursor Projects\Recipes\obj\Debug\net8.0\RecipesApp.sourcelink.json

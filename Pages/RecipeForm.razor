@@ -23,10 +23,50 @@
             </div>
 
             <div class="mb-3">
-                <label class="form-label" for="ingredients">Ingredients *</label>
-                <InputTextArea id="ingredients" class="form-control" rows="6" @bind-Value="recipe.Ingredients" />
-                <ValidationMessage For="@(() => recipe.Ingredients)" />
-                <small class="form-text text-muted">Enter each ingredient on a new line</small>
+                <label class="form-label">Ingredients *</label>
+                <div class="ingredients-list">
+                    @for (int i = 0; i < ingredientEntries.Count; i++)
+                    {
+                        var index = i;
+                        <div class="row mb-2 align-items-end">
+                            <div class="col-md-4">
+                                <label class="form-label small">Quantity</label>
+                                <InputNumber class="form-control form-control-sm" 
+                                    @bind-Value="ingredientEntries[index].Quantity" 
+                                    placeholder="0" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small">Unit</label>
+                                <InputSelect class="form-select form-select-sm" 
+                                    @bind-Value="ingredientEntries[index].Unit">
+                                    @foreach (var unit in Enum.GetValues<MeasurementUnit>())
+                                    {
+                                        <option value="@unit">@UnitConversionService.GetUnitDisplayName(unit)</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small">Ingredient Name</label>
+                                <InputText class="form-control form-control-sm" 
+                                    @bind-Value="ingredientEntries[index].Name" 
+                                    placeholder="e.g., flour" />
+                            </div>
+                            <div class="col-md-1">
+                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                    @onclick="() => RemoveIngredient(index)">
+                                    <span class="bi bi-trash"></span>
+                                </button>
+                            </div>
+                        </div>
+                    }
+                    @if (ingredientEntries.Count == 0)
+                    {
+                        <div class="text-danger small mb-2">At least one ingredient is required</div>
+                    }
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-primary mt-2" @onclick="AddIngredient">
+                    <span class="bi bi-plus"></span> Add Ingredient
+                </button>
             </div>
 
             <div class="mb-3">
@@ -74,6 +114,7 @@
     public int Id { get; set; }
 
     private Recipe recipe = new();
+    private List<IngredientEntry> ingredientEntries = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -83,23 +124,69 @@
             if (existingRecipe != null)
             {
                 recipe = existingRecipe;
+                // Convert recipe ingredients to entry format
+                ingredientEntries = existingRecipe.RecipeIngredients.Select(ri =>
+                {
+                    // Convert from base unit back to a display unit
+                    var (displayQuantity, displayUnit) = UnitConversionService.ConvertFromBaseUnit(
+                        ri.Quantity ?? 0, 
+                        ri.Unit ?? UnitConversionService.BASE_COUNT_UNIT);
+                    
+                    return new IngredientEntry
+                    {
+                        Name = ri.Ingredient.Name,
+                        Quantity = displayQuantity,
+                        Unit = displayUnit
+                    };
+                }).ToList();
             }
             else
             {
                 Navigation.NavigateTo("/");
             }
         }
+        else
+        {
+            // Add one empty ingredient entry for new recipes
+            AddIngredient();
+        }
+    }
+
+    private void AddIngredient()
+    {
+        ingredientEntries.Add(new IngredientEntry 
+        { 
+            Unit = MeasurementUnit.Pieces 
+        });
+    }
+
+    private void RemoveIngredient(int index)
+    {
+        if (ingredientEntries.Count > index)
+        {
+            ingredientEntries.RemoveAt(index);
+        }
     }
 
     private async Task HandleValidSubmit()
     {
+        // Validate that at least one ingredient has a name
+        var validIngredients = ingredientEntries
+            .Where(e => !string.IsNullOrWhiteSpace(e.Name))
+            .ToList();
+
+        if (validIngredients.Count == 0)
+        {
+            return;
+        }
+
         if (recipe.Id > 0)
         {
-            await RecipeService.UpdateRecipeAsync(recipe);
+            await RecipeService.UpdateRecipeAsync(recipe, validIngredients);
         }
         else
         {
-            await RecipeService.AddRecipeAsync(recipe);
+            await RecipeService.AddRecipeAsync(recipe, validIngredients);
         }
         Navigation.NavigateTo("/");
     }

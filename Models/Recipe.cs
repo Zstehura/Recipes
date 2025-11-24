@@ -10,8 +10,8 @@ public class Recipe
     [StringLength(200, ErrorMessage = "Recipe name cannot exceed 200 characters")]
     public string Name { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Ingredients are required")]
-    public string Ingredients { get; set; } = string.Empty;
+    // Navigation property for many-to-many relationship with ingredients
+    public ICollection<RecipeIngredient> RecipeIngredients { get; set; } = new List<RecipeIngredient>();
 
     [Required(ErrorMessage = "Instructions are required")]
     public string Instructions { get; set; } = string.Empty;

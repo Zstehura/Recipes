@@ -53,9 +53,22 @@ else
             <div class="mb-4">
                 <h3>Ingredients</h3>
                 <div class="ingredients-list">
-                    @foreach (var ingredient in recipe.Ingredients.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                    @foreach (var recipeIngredient in recipe.RecipeIngredients)
                     {
-                        <div class="ingredient-item">@ingredient</div>
+                        <div class="ingredient-item">
+                            @if (recipeIngredient.Quantity.HasValue && !string.IsNullOrWhiteSpace(recipeIngredient.Unit))
+                            {
+                                // Convert from base unit to display unit
+                                var (displayQuantity, displayUnit) = UnitConversionService.ConvertFromBaseUnit(
+                                    recipeIngredient.Quantity.Value, 
+                                    recipeIngredient.Unit);
+                                <strong>@displayQuantity.ToString("0.##") @UnitConversionService.GetUnitDisplayName(displayUnit)</strong> @recipeIngredient.Ingredient.Name
+                            }
+                            else
+                            {
+                                @recipeIngredient.Ingredient.Name
+                            }
+                        </div>
                     }
                 </div>
             </div>

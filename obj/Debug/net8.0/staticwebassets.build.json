@@ -1,6 +1,6 @@
 {
   "Version": 1,
-  "Hash": "NwdAnoS+KDdUa0f1u/IXE7ggtbLHPiQ8o2hP5/+TYAc=",
+  "Hash": "wGkSg10sm3N7feyo6sHnqLem532h2ghJuhuApTI0Q5w=",
   "Source": "RecipesApp",
   "BasePath": "_content/RecipesApp",
   "Mode": "Default",
@@ -31,8 +31,8 @@
       "RelatedAsset": "",
       "AssetTraitName": "",
       "AssetTraitValue": "",
-      "Fingerprint": "xdlmjdbbhm",
-      "Integrity": "OzMT81YMXEKTQC6T5pcfi1fJaVQbBMpRe1y76lPDPFI=",
+      "Fingerprint": "8pgffw5azx",
+      "Integrity": "tD6vjeVWq1TLRGktA9aQBj8PuowouOLrUdSoaSDUFKE=",
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "wwwroot\\css\\app.css"
@@ -61,6 +61,51 @@
   ],
   "Endpoints": [
     {
+      "Route": "css/app.8pgffw5azx.css",
+      "AssetFile": "C:\\Users\\zacks\\OneDrive\\Documents\\Cursor Projects\\Recipes\\wwwroot\\css\\app.css",
+      "Selectors": [],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "13209"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "text/css"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"tD6vjeVWq1TLRGktA9aQBj8PuowouOLrUdSoaSDUFKE=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Mon, 24 Nov 2025 02:41:42 GMT"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "max-age=31536000, immutable"
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "fingerprint",
+          "Value": "8pgffw5azx"
+        },
+        {
+          "Name": "label",
+          "Value": "css/app.css"
+        },
+        {
+          "Name": "integrity",
+          "Value": "sha256-tD6vjeVWq1TLRGktA9aQBj8PuowouOLrUdSoaSDUFKE="
+        }
+      ]
+    },
+    {
       "Route": "css/app.css",
       "AssetFile": "C:\\Users\\zacks\\OneDrive\\Documents\\Cursor Projects\\Recipes\\wwwroot\\css\\app.css",
       "Selectors": [],
@@ -71,7 +116,7 @@
         },
         {
           "Name": "Content-Length",
-          "Value": "13213"
+          "Value": "13209"
         },
         {
           "Name": "Content-Type",
@@ -79,11 +124,11 @@
         },
         {
           "Name": "ETag",
-          "Value": "\"OzMT81YMXEKTQC6T5pcfi1fJaVQbBMpRe1y76lPDPFI=\""
+          "Value": "\"tD6vjeVWq1TLRGktA9aQBj8PuowouOLrUdSoaSDUFKE=\""
         },
         {
           "Name": "Last-Modified",
-          "Value": "Sun, 23 Nov 2025 01:41:10 GMT"
+          "Value": "Mon, 24 Nov 2025 02:41:42 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -93,52 +138,7 @@
       "EndpointProperties": [
         {
           "Name": "integrity",
-          "Value": "sha256-OzMT81YMXEKTQC6T5pcfi1fJaVQbBMpRe1y76lPDPFI="
-        }
-      ]
-    },
-    {
-      "Route": "css/app.xdlmjdbbhm.css",
-      "AssetFile": "C:\\Users\\zacks\\OneDrive\\Documents\\Cursor Projects\\Recipes\\wwwroot\\css\\app.css",
-      "Selectors": [],
-      "ResponseHeaders": [
-        {
-          "Name": "Accept-Ranges",
-          "Value": "bytes"
-        },
-        {
-          "Name": "Content-Length",
-          "Value": "13213"
-        },
-        {
-          "Name": "Content-Type",
-          "Value": "text/css"
-        },
-        {
-          "Name": "ETag",
-          "Value": "\"OzMT81YMXEKTQC6T5pcfi1fJaVQbBMpRe1y76lPDPFI=\""
-        },
-        {
-          "Name": "Last-Modified",
-          "Value": "Sun, 23 Nov 2025 01:41:10 GMT"
-        },
-        {
-          "Name": "Cache-Control",
-          "Value": "max-age=31536000, immutable"
-        }
-      ],
-      "EndpointProperties": [
-        {
-          "Name": "fingerprint",
-          "Value": "xdlmjdbbhm"
-        },
-        {
-          "Name": "label",
-          "Value": "css/app.css"
-        },
-        {
-          "Name": "integrity",
-          "Value": "sha256-OzMT81YMXEKTQC6T5pcfi1fJaVQbBMpRe1y76lPDPFI="
+          "Value": "sha256-tD6vjeVWq1TLRGktA9aQBj8PuowouOLrUdSoaSDUFKE="
         }
       ]
     },
