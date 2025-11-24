@@ -1,0 +1,28 @@
+﻿<Project>
+  <ItemGroup>
+    <StaticWebAssetEndpoint Include="_content/RecipesApp/css/app.css">
+      <AssetFile>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\staticwebassets\css\app.css'))</AssetFile>
+      <Selectors><![CDATA[[]]]></Selectors>
+      <EndpointProperties><![CDATA[[{"Name":"integrity","Value":"sha256-OzMT81YMXEKTQC6T5pcfi1fJaVQbBMpRe1y76lPDPFI="}]]]></EndpointProperties>
+      <ResponseHeaders><![CDATA[[{"Name":"Accept-Ranges","Value":"bytes"},{"Name":"Cache-Control","Value":"no-cache"},{"Name":"Content-Length","Value":"13213"},{"Name":"Content-Type","Value":"text/css"},{"Name":"ETag","Value":"\u0022OzMT81YMXEKTQC6T5pcfi1fJaVQbBMpRe1y76lPDPFI=\u0022"},{"Name":"Last-Modified","Value":"Sun, 23 Nov 2025 01:41:10 GMT"}]]]></ResponseHeaders>
+    </StaticWebAssetEndpoint>
+    <StaticWebAssetEndpoint Include="_content/RecipesApp/css/app.xdlmjdbbhm.css">
+      <AssetFile>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\staticwebassets\css\app.css'))</AssetFile>
+      <Selectors><![CDATA[[]]]></Selectors>
+      <EndpointProperties><![CDATA[[{"Name":"fingerprint","Value":"xdlmjdbbhm"},{"Name":"integrity","Value":"sha256-OzMT81YMXEKTQC6T5pcfi1fJaVQbBMpRe1y76lPDPFI="},{"Name":"label","Value":"_content/RecipesApp/css/app.css"}]]]></EndpointProperties>
+      <ResponseHeaders><![CDATA[[{"Name":"Accept-Ranges","Value":"bytes"},{"Name":"Cache-Control","Value":"max-age=31536000, immutable"},{"Name":"Content-Length","Value":"13213"},{"Name":"Content-Type","Value":"text/css"},{"Name":"ETag","Value":"\u0022OzMT81YMXEKTQC6T5pcfi1fJaVQbBMpRe1y76lPDPFI=\u0022"},{"Name":"Last-Modified","Value":"Sun, 23 Nov 2025 01:41:10 GMT"}]]]></ResponseHeaders>
+    </StaticWebAssetEndpoint>
+    <StaticWebAssetEndpoint Include="_content/RecipesApp/css/bootstrap/bootstrap.min.css">
+      <AssetFile>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\staticwebassets\css\bootstrap\bootstrap.min.css'))</AssetFile>
+      <Selectors><![CDATA[[]]]></Selectors>
+      <EndpointProperties><![CDATA[[{"Name":"integrity","Value":"sha256-iTbQA73Fb38tDG8KhXsb7OJBQpjJwlOuam9O2nDV0AY="}]]]></EndpointProperties>
+      <ResponseHeaders><![CDATA[[{"Name":"Accept-Ranges","Value":"bytes"},{"Name":"Cache-Control","Value":"no-cache"},{"Name":"Content-Length","Value":"150"},{"Name":"Content-Type","Value":"text/css"},{"Name":"ETag","Value":"\u0022iTbQA73Fb38tDG8KhXsb7OJBQpjJwlOuam9O2nDV0AY=\u0022"},{"Name":"Last-Modified","Value":"Sun, 23 Nov 2025 01:11:42 GMT"}]]]></ResponseHeaders>
+    </StaticWebAssetEndpoint>
+    <StaticWebAssetEndpoint Include="_content/RecipesApp/css/bootstrap/bootstrap.min.l5schbilk4.css">
+      <AssetFile>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\staticwebassets\css\bootstrap\bootstrap.min.css'))</AssetFile>
+      <Selectors><![CDATA[[]]]></Selectors>
+      <EndpointProperties><![CDATA[[{"Name":"fingerprint","Value":"l5schbilk4"},{"Name":"integrity","Value":"sha256-iTbQA73Fb38tDG8KhXsb7OJBQpjJwlOuam9O2nDV0AY="},{"Name":"label","Value":"_content/RecipesApp/css/bootstrap/bootstrap.min.css"}]]]></EndpointProperties>
+      <ResponseHeaders><![CDATA[[{"Name":"Accept-Ranges","Value":"bytes"},{"Name":"Cache-Control","Value":"max-age=31536000, immutable"},{"Name":"Content-Length","Value":"150"},{"Name":"Content-Type","Value":"text/css"},{"Name":"ETag","Value":"\u0022iTbQA73Fb38tDG8KhXsb7OJBQpjJwlOuam9O2nDV0AY=\u0022"},{"Name":"Last-Modified","Value":"Sun, 23 Nov 2025 01:11:42 GMT"}]]]></ResponseHeaders>
+    </StaticWebAssetEndpoint>
+  </ItemGroup>
+</Project>

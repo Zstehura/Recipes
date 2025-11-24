@@ -1,0 +1,105 @@
+@page "/"
+@using RecipesApp.Models
+@using RecipesApp.Services
+@inject RecipeService RecipeService
+@inject NavigationManager Navigation
+
+<PageTitle>Recipes</PageTitle>
+
+<h1>My Recipes</h1>
+
+<div class="mb-3">
+    <div class="row">
+        <div class="col-md-6">
+            <input type="text" class="form-control" placeholder="Search recipes..." @bind="searchTerm" @bind:event="oninput" @bind:after="LoadRecipes" />
+        </div>
+        <div class="col-md-6 text-end">
+            <a href="/recipe/new" class="btn btn-primary">
+                <span class="bi bi-plus-circle"></span> Add New Recipe
+            </a>
+        </div>
+    </div>
+</div>
+
+@if (recipes == null)
+{
+    <p><em>Loading...</em></p>
+}
+else if (!recipes.Any())
+{
+    <div class="alert alert-info">
+        <p>No recipes found. <a href="/recipe/new">Create your first recipe!</a></p>
+    </div>
+}
+else
+{
+    <div class="row">
+        @foreach (var recipe in recipes)
+        {
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100 recipe-card">
+                    <div class="card-body">
+                        <h5 class="card-title">@recipe.Name</h5>
+                        <p class="card-text">
+                            <small class="text-muted">
+                                <span class="bi bi-clock"></span> @recipe.CookingTime min
+                                <span class="ms-2 bi bi-people"></span> @recipe.Servings servings
+                            </small>
+                        </p>
+                        @if (!string.IsNullOrEmpty(recipe.Tags))
+                        {
+                            <div class="mb-2">
+                                @foreach (var tag in recipe.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                                {
+                                    <span class="badge bg-secondary me-1">@tag</span>
+                                }
+                            </div>
+                        }
+                        <p class="card-text text-muted small">
+                            @(recipe.Instructions.Length > 100 ? recipe.Instructions.Substring(0, 100) + "..." : recipe.Instructions)
+                        </p>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <div class="btn-group w-100" role="group">
+                            <a href="/recipe/@recipe.Id" class="btn btn-sm btn-outline-primary">View</a>
+                            <a href="/recipe/@recipe.Id/edit" class="btn btn-sm btn-outline-secondary">Edit</a>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteRecipe(recipe.Id)">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private List<Recipe>? recipes;
+    private string searchTerm = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRecipes();
+    }
+
+    private async Task LoadRecipes()
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            recipes = await RecipeService.GetAllRecipesAsync();
+        }
+        else
+        {
+            recipes = await RecipeService.SearchRecipesAsync(searchTerm);
+        }
+        StateHasChanged();
+    }
+
+    private async Task DeleteRecipe(int id)
+    {
+        if (await RecipeService.DeleteRecipeAsync(id))
+        {
+            await LoadRecipes();
+        }
+    }
+}
+

@@ -1,0 +1,228 @@
+{
+  "Version": 1,
+  "Hash": "NwdAnoS+KDdUa0f1u/IXE7ggtbLHPiQ8o2hP5/+TYAc=",
+  "Source": "RecipesApp",
+  "BasePath": "_content/RecipesApp",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [
+    {
+      "Name": "RecipesApp\\wwwroot",
+      "Source": "RecipesApp",
+      "ContentRoot": "C:\\Users\\zacks\\OneDrive\\Documents\\Cursor Projects\\Recipes\\wwwroot\\",
+      "BasePath": "_content/RecipesApp",
+      "Pattern": "**"
+    }
+  ],
+  "Assets": [
+    {
+      "Identity": "C:\\Users\\zacks\\OneDrive\\Documents\\Cursor Projects\\Recipes\\wwwroot\\css\\app.css",
+      "SourceId": "RecipesApp",
+      "SourceType": "Discovered",
+      "ContentRoot": "C:\\Users\\zacks\\OneDrive\\Documents\\Cursor Projects\\Recipes\\wwwroot\\",
+      "BasePath": "_content/RecipesApp",
+      "RelativePath": "css/app#[.{fingerprint}]?.css",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "Fingerprint": "xdlmjdbbhm",
+      "Integrity": "OzMT81YMXEKTQC6T5pcfi1fJaVQbBMpRe1y76lPDPFI=",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot\\css\\app.css"
+    },
+    {
+      "Identity": "C:\\Users\\zacks\\OneDrive\\Documents\\Cursor Projects\\Recipes\\wwwroot\\css\\bootstrap\\bootstrap.min.css",
+      "SourceId": "RecipesApp",
+      "SourceType": "Discovered",
+      "ContentRoot": "C:\\Users\\zacks\\OneDrive\\Documents\\Cursor Projects\\Recipes\\wwwroot\\",
+      "BasePath": "_content/RecipesApp",
+      "RelativePath": "css/bootstrap/bootstrap.min#[.{fingerprint}]?.css",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "Fingerprint": "l5schbilk4",
+      "Integrity": "iTbQA73Fb38tDG8KhXsb7OJBQpjJwlOuam9O2nDV0AY=",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot\\css\\bootstrap\\bootstrap.min.css"
+    }
+  ],
+  "Endpoints": [
+    {
+      "Route": "css/app.css",
+      "AssetFile": "C:\\Users\\zacks\\OneDrive\\Documents\\Cursor Projects\\Recipes\\wwwroot\\css\\app.css",
+      "Selectors": [],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "13213"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "text/css"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"OzMT81YMXEKTQC6T5pcfi1fJaVQbBMpRe1y76lPDPFI=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Sun, 23 Nov 2025 01:41:10 GMT"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "no-cache"
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "integrity",
+          "Value": "sha256-OzMT81YMXEKTQC6T5pcfi1fJaVQbBMpRe1y76lPDPFI="
+        }
+      ]
+    },
+    {
+      "Route": "css/app.xdlmjdbbhm.css",
+      "AssetFile": "C:\\Users\\zacks\\OneDrive\\Documents\\Cursor Projects\\Recipes\\wwwroot\\css\\app.css",
+      "Selectors": [],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "13213"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "text/css"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"OzMT81YMXEKTQC6T5pcfi1fJaVQbBMpRe1y76lPDPFI=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Sun, 23 Nov 2025 01:41:10 GMT"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "max-age=31536000, immutable"
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "fingerprint",
+          "Value": "xdlmjdbbhm"
+        },
+        {
+          "Name": "label",
+          "Value": "css/app.css"
+        },
+        {
+          "Name": "integrity",
+          "Value": "sha256-OzMT81YMXEKTQC6T5pcfi1fJaVQbBMpRe1y76lPDPFI="
+        }
+      ]
+    },
+    {
+      "Route": "css/bootstrap/bootstrap.min.css",
+      "AssetFile": "C:\\Users\\zacks\\OneDrive\\Documents\\Cursor Projects\\Recipes\\wwwroot\\css\\bootstrap\\bootstrap.min.css",
+      "Selectors": [],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "150"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "text/css"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"iTbQA73Fb38tDG8KhXsb7OJBQpjJwlOuam9O2nDV0AY=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Sun, 23 Nov 2025 01:11:42 GMT"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "no-cache"
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "integrity",
+          "Value": "sha256-iTbQA73Fb38tDG8KhXsb7OJBQpjJwlOuam9O2nDV0AY="
+        }
+      ]
+    },
+    {
+      "Route": "css/bootstrap/bootstrap.min.l5schbilk4.css",
+      "AssetFile": "C:\\Users\\zacks\\OneDrive\\Documents\\Cursor Projects\\Recipes\\wwwroot\\css\\bootstrap\\bootstrap.min.css",
+      "Selectors": [],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "150"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "text/css"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"iTbQA73Fb38tDG8KhXsb7OJBQpjJwlOuam9O2nDV0AY=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Sun, 23 Nov 2025 01:11:42 GMT"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "max-age=31536000, immutable"
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "fingerprint",
+          "Value": "l5schbilk4"
+        },
+        {
+          "Name": "label",
+          "Value": "css/bootstrap/bootstrap.min.css"
+        },
+        {
+          "Name": "integrity",
+          "Value": "sha256-iTbQA73Fb38tDG8KhXsb7OJBQpjJwlOuam9O2nDV0AY="
+        }
+      ]
+    }
+  ]
+}
