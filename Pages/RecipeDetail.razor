@@ -22,6 +22,10 @@ else
     </div>
 
     <div class="card">
+        @if (recipe.ImageContentType != null)
+        {
+            <img src="/api/recipe/@recipe.Id/image" alt="@recipe.Name" class="card-img-top" style="max-height: 400px; object-fit: cover; width: 100%;" />
+        }
         <div class="card-header">
             <h1 class="mb-0">@recipe.Name</h1>
         </div>

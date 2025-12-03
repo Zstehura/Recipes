@@ -4,25 +4,25 @@
       <AssetFile>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\staticwebassets\css\app.css'))</AssetFile>
       <Selectors><![CDATA[[]]]></Selectors>
       <EndpointProperties><![CDATA[[{"Name":"fingerprint","Value":"8pgffw5azx"},{"Name":"integrity","Value":"sha256-tD6vjeVWq1TLRGktA9aQBj8PuowouOLrUdSoaSDUFKE="},{"Name":"label","Value":"_content/RecipesApp/css/app.css"}]]]></EndpointProperties>
-      <ResponseHeaders><![CDATA[[{"Name":"Accept-Ranges","Value":"bytes"},{"Name":"Cache-Control","Value":"max-age=31536000, immutable"},{"Name":"Content-Length","Value":"13209"},{"Name":"Content-Type","Value":"text/css"},{"Name":"ETag","Value":"\u0022tD6vjeVWq1TLRGktA9aQBj8PuowouOLrUdSoaSDUFKE=\u0022"},{"Name":"Last-Modified","Value":"Mon, 24 Nov 2025 02:41:42 GMT"}]]]></ResponseHeaders>
+      <ResponseHeaders><![CDATA[[{"Name":"Accept-Ranges","Value":"bytes"},{"Name":"Cache-Control","Value":"max-age=31536000, immutable"},{"Name":"Content-Length","Value":"13209"},{"Name":"Content-Type","Value":"text/css"},{"Name":"ETag","Value":"\u0022tD6vjeVWq1TLRGktA9aQBj8PuowouOLrUdSoaSDUFKE=\u0022"},{"Name":"Last-Modified","Value":"Mon, 24 Nov 2025 15:57:31 GMT"}]]]></ResponseHeaders>
     </StaticWebAssetEndpoint>
     <StaticWebAssetEndpoint Include="_content/RecipesApp/css/app.css">
       <AssetFile>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\staticwebassets\css\app.css'))</AssetFile>
       <Selectors><![CDATA[[]]]></Selectors>
       <EndpointProperties><![CDATA[[{"Name":"integrity","Value":"sha256-tD6vjeVWq1TLRGktA9aQBj8PuowouOLrUdSoaSDUFKE="}]]]></EndpointProperties>
-      <ResponseHeaders><![CDATA[[{"Name":"Accept-Ranges","Value":"bytes"},{"Name":"Cache-Control","Value":"no-cache"},{"Name":"Content-Length","Value":"13209"},{"Name":"Content-Type","Value":"text/css"},{"Name":"ETag","Value":"\u0022tD6vjeVWq1TLRGktA9aQBj8PuowouOLrUdSoaSDUFKE=\u0022"},{"Name":"Last-Modified","Value":"Mon, 24 Nov 2025 02:41:42 GMT"}]]]></ResponseHeaders>
+      <ResponseHeaders><![CDATA[[{"Name":"Accept-Ranges","Value":"bytes"},{"Name":"Cache-Control","Value":"no-cache"},{"Name":"Content-Length","Value":"13209"},{"Name":"Content-Type","Value":"text/css"},{"Name":"ETag","Value":"\u0022tD6vjeVWq1TLRGktA9aQBj8PuowouOLrUdSoaSDUFKE=\u0022"},{"Name":"Last-Modified","Value":"Mon, 24 Nov 2025 15:57:31 GMT"}]]]></ResponseHeaders>
     </StaticWebAssetEndpoint>
     <StaticWebAssetEndpoint Include="_content/RecipesApp/css/bootstrap/bootstrap.min.css">
       <AssetFile>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\staticwebassets\css\bootstrap\bootstrap.min.css'))</AssetFile>
       <Selectors><![CDATA[[]]]></Selectors>
       <EndpointProperties><![CDATA[[{"Name":"integrity","Value":"sha256-iTbQA73Fb38tDG8KhXsb7OJBQpjJwlOuam9O2nDV0AY="}]]]></EndpointProperties>
-      <ResponseHeaders><![CDATA[[{"Name":"Accept-Ranges","Value":"bytes"},{"Name":"Cache-Control","Value":"no-cache"},{"Name":"Content-Length","Value":"150"},{"Name":"Content-Type","Value":"text/css"},{"Name":"ETag","Value":"\u0022iTbQA73Fb38tDG8KhXsb7OJBQpjJwlOuam9O2nDV0AY=\u0022"},{"Name":"Last-Modified","Value":"Sun, 23 Nov 2025 01:11:42 GMT"}]]]></ResponseHeaders>
+      <ResponseHeaders><![CDATA[[{"Name":"Accept-Ranges","Value":"bytes"},{"Name":"Cache-Control","Value":"no-cache"},{"Name":"Content-Length","Value":"150"},{"Name":"Content-Type","Value":"text/css"},{"Name":"ETag","Value":"\u0022iTbQA73Fb38tDG8KhXsb7OJBQpjJwlOuam9O2nDV0AY=\u0022"},{"Name":"Last-Modified","Value":"Mon, 24 Nov 2025 15:57:31 GMT"}]]]></ResponseHeaders>
     </StaticWebAssetEndpoint>
     <StaticWebAssetEndpoint Include="_content/RecipesApp/css/bootstrap/bootstrap.min.l5schbilk4.css">
       <AssetFile>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\staticwebassets\css\bootstrap\bootstrap.min.css'))</AssetFile>
       <Selectors><![CDATA[[]]]></Selectors>
       <EndpointProperties><![CDATA[[{"Name":"fingerprint","Value":"l5schbilk4"},{"Name":"integrity","Value":"sha256-iTbQA73Fb38tDG8KhXsb7OJBQpjJwlOuam9O2nDV0AY="},{"Name":"label","Value":"_content/RecipesApp/css/bootstrap/bootstrap.min.css"}]]]></EndpointProperties>
-      <ResponseHeaders><![CDATA[[{"Name":"Accept-Ranges","Value":"bytes"},{"Name":"Cache-Control","Value":"max-age=31536000, immutable"},{"Name":"Content-Length","Value":"150"},{"Name":"Content-Type","Value":"text/css"},{"Name":"ETag","Value":"\u0022iTbQA73Fb38tDG8KhXsb7OJBQpjJwlOuam9O2nDV0AY=\u0022"},{"Name":"Last-Modified","Value":"Sun, 23 Nov 2025 01:11:42 GMT"}]]]></ResponseHeaders>
+      <ResponseHeaders><![CDATA[[{"Name":"Accept-Ranges","Value":"bytes"},{"Name":"Cache-Control","Value":"max-age=31536000, immutable"},{"Name":"Content-Length","Value":"150"},{"Name":"Content-Type","Value":"text/css"},{"Name":"ETag","Value":"\u0022iTbQA73Fb38tDG8KhXsb7OJBQpjJwlOuam9O2nDV0AY=\u0022"},{"Name":"Last-Modified","Value":"Mon, 24 Nov 2025 15:57:31 GMT"}]]]></ResponseHeaders>
     </StaticWebAssetEndpoint>
   </ItemGroup>
 </Project>

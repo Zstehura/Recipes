@@ -18,6 +18,22 @@ public class RecipeService
         return await _context.Recipes
             .Include(r => r.RecipeIngredients)
                 .ThenInclude(ri => ri.Ingredient)
+            .Select(r => new Recipe
+            {
+                Id = r.Id,
+                Name = r.Name,
+                Instructions = r.Instructions,
+                CookingTime = r.CookingTime,
+                Servings = r.Servings,
+                Tags = r.Tags,
+                Notes = r.Notes,
+                CreatedDate = r.CreatedDate,
+                ModifiedDate = r.ModifiedDate,
+                ImageContentType = r.ImageContentType,
+                RecipeIngredients = r.RecipeIngredients,
+                // Exclude ImageData for performance
+                ImageData = null
+            })
             .OrderByDescending(r => r.ModifiedDate)
             .ToListAsync();
     }
@@ -27,6 +43,22 @@ public class RecipeService
         return await _context.Recipes
             .Include(r => r.RecipeIngredients)
                 .ThenInclude(ri => ri.Ingredient)
+            .Select(r => new Recipe
+            {
+                Id = r.Id,
+                Name = r.Name,
+                Instructions = r.Instructions,
+                CookingTime = r.CookingTime,
+                Servings = r.Servings,
+                Tags = r.Tags,
+                Notes = r.Notes,
+                CreatedDate = r.CreatedDate,
+                ModifiedDate = r.ModifiedDate,
+                ImageContentType = r.ImageContentType,
+                RecipeIngredients = r.RecipeIngredients,
+                // Exclude ImageData for performance
+                ImageData = null
+            })
             .FirstOrDefaultAsync(r => r.Id == id);
     }
 
@@ -46,7 +78,7 @@ public class RecipeService
         return recipe;
     }
 
-    public async Task<Recipe?> UpdateRecipeAsync(Recipe recipe, List<IngredientEntry> ingredientEntries)
+    public async Task<Recipe?> UpdateRecipeAsync(Recipe recipe, List<IngredientEntry> ingredientEntries, bool removeImage = false)
     {
         var existingRecipe = await _context.Recipes
             .Include(r => r.RecipeIngredients)
@@ -63,6 +95,18 @@ public class RecipeService
         existingRecipe.Tags = recipe.Tags;
         existingRecipe.Notes = recipe.Notes;
         existingRecipe.ModifiedDate = DateTime.Now;
+        
+        // Update or remove image
+        if (removeImage)
+        {
+            existingRecipe.ImageData = null;
+            existingRecipe.ImageContentType = null;
+        }
+        else if (recipe.ImageData != null)
+        {
+            existingRecipe.ImageData = recipe.ImageData;
+            existingRecipe.ImageContentType = recipe.ImageContentType;
+        }
 
         // Remove existing recipe ingredients
         _context.RecipeIngredients.RemoveRange(existingRecipe.RecipeIngredients);
@@ -98,6 +142,22 @@ public class RecipeService
             .Where(r => r.Name.ToLower().Contains(lowerSearchTerm) ||
                        r.RecipeIngredients.Any(ri => ri.Ingredient.Name.ToLower().Contains(lowerSearchTerm)) ||
                        r.Tags.ToLower().Contains(lowerSearchTerm))
+            .Select(r => new Recipe
+            {
+                Id = r.Id,
+                Name = r.Name,
+                Instructions = r.Instructions,
+                CookingTime = r.CookingTime,
+                Servings = r.Servings,
+                Tags = r.Tags,
+                Notes = r.Notes,
+                CreatedDate = r.CreatedDate,
+                ModifiedDate = r.ModifiedDate,
+                ImageContentType = r.ImageContentType,
+                RecipeIngredients = r.RecipeIngredients,
+                // Exclude ImageData for performance
+                ImageData = null
+            })
             .OrderByDescending(r => r.ModifiedDate)
             .ToListAsync();
     }
@@ -142,5 +202,28 @@ public class RecipeService
             });
         }
     }
+
+    // Get image data separately for performance
+    public async Task<(byte[]? imageData, string? contentType)> GetRecipeImageAsync(int recipeId)
+    {
+        var recipe = await _context.Recipes
+            .Where(r => r.Id == recipeId)
+            .Select(r => new { r.ImageData, r.ImageContentType })
+            .FirstOrDefaultAsync();
+            
+        return recipe != null ? (recipe.ImageData, recipe.ImageContentType) : (null, null);
+    }
+
+    // Check if recipe has an image
+    public async Task<bool> RecipeHasImageAsync(int recipeId)
+    {
+        return await _context.Recipes
+            .Where(r => r.Id == recipeId)
+            .Select(r => r.ImageData != null)
+            .FirstOrDefaultAsync();
+    }
+
+    // Maximum image size: 2MB
+    public const int MaxImageSizeBytes = 2 * 1024 * 1024;
 }
 

@@ -36,6 +36,10 @@ else
         {
             <div class="col-md-6 col-lg-4 mb-4">
                 <div class="card h-100 recipe-card">
+                    @if (recipe.ImageContentType != null)
+                    {
+                        <img src="/api/recipe/@recipe.Id/image" alt="@recipe.Name" class="card-img-top" style="height: 200px; object-fit: cover;" />
+                    }
                     <div class="card-body">
                         <h5 class="card-title">@recipe.Name</h5>
                         <p class="card-text">

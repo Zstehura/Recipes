@@ -3,6 +3,7 @@
 @using RecipesApp.Models
 @using RecipesApp.Services
 @using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.Forms
 @inject RecipeService RecipeService
 @inject NavigationManager Navigation
 
@@ -20,6 +21,25 @@
                 <label class="form-label" for="name">Recipe Name *</label>
                 <InputText id="name" class="form-control" @bind-Value="recipe.Name" />
                 <ValidationMessage For="@(() => recipe.Name)" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label" for="image">Background Image (Optional)</label>
+                <InputFile id="image" class="form-control" OnChange="HandleImageUpload" accept="image/*" />
+                <small class="form-text text-muted">Maximum size: 2MB. Supported formats: JPEG, PNG, GIF</small>
+                @if (!string.IsNullOrEmpty(imageError))
+                {
+                    <div class="text-danger small mt-1">@imageError</div>
+                }
+                @if (recipe.ImageContentType != null)
+                {
+                    <div class="mt-2">
+                        <small class="text-success">Image uploaded successfully</small>
+                        <button type="button" class="btn btn-sm btn-outline-danger ms-2" @onclick="RemoveImage">
+                            Remove Image
+                        </button>
+                    </div>
+                }
             </div>
 
             <div class="mb-3">
@@ -115,6 +135,8 @@
 
     private Recipe recipe = new();
     private List<IngredientEntry> ingredientEntries = new();
+    private string imageError = string.Empty;
+    private bool imageRemoved = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -124,6 +146,16 @@
             if (existingRecipe != null)
             {
                 recipe = existingRecipe;
+                imageRemoved = false; // Reset flag when loading existing recipe
+                
+                // Load image data separately if it exists
+                if (existingRecipe.ImageContentType != null)
+                {
+                    var (imageData, contentType) = await RecipeService.GetRecipeImageAsync(Id);
+                    recipe.ImageData = imageData;
+                    recipe.ImageContentType = contentType;
+                }
+                
                 // Convert recipe ingredients to entry format
                 ingredientEntries = existingRecipe.RecipeIngredients.Select(ri =>
                 {
@@ -168,6 +200,51 @@
         }
     }
 
+    private async Task HandleImageUpload(InputFileChangeEventArgs e)
+    {
+        imageError = string.Empty;
+        imageRemoved = false; // Reset removal flag when new image is uploaded
+        
+        var file = e.File;
+        
+        // Validate file size
+        if (file.Size > RecipeService.MaxImageSizeBytes)
+        {
+            imageError = $"File size exceeds the maximum limit of {RecipeService.MaxImageSizeBytes / (1024 * 1024)}MB";
+            return;
+        }
+
+        // Validate content type
+        if (!file.ContentType.StartsWith("image/"))
+        {
+            imageError = "Please select an image file (JPEG, PNG, GIF, etc.)";
+            return;
+        }
+
+        try
+        {
+            // Read file into byte array
+            using var stream = file.OpenReadStream(maxAllowedSize: RecipeService.MaxImageSizeBytes);
+            using var memoryStream = new MemoryStream();
+            await stream.CopyToAsync(memoryStream);
+            
+            recipe.ImageData = memoryStream.ToArray();
+            recipe.ImageContentType = file.ContentType;
+        }
+        catch (Exception ex)
+        {
+            imageError = $"Error uploading image: {ex.Message}";
+        }
+    }
+
+    private void RemoveImage()
+    {
+        recipe.ImageData = null;
+        recipe.ImageContentType = null;
+        imageError = string.Empty;
+        imageRemoved = true;
+    }
+
     private async Task HandleValidSubmit()
     {
         // Validate that at least one ingredient has a name
@@ -180,9 +257,16 @@
             return;
         }
 
+        // If image was explicitly removed, ensure ImageData is null
+        if (imageRemoved)
+        {
+            recipe.ImageData = null;
+            recipe.ImageContentType = null;
+        }
+
         if (recipe.Id > 0)
         {
-            await RecipeService.UpdateRecipeAsync(recipe, validIngredients);
+            await RecipeService.UpdateRecipeAsync(recipe, validIngredients, imageRemoved);
         }
         else
         {

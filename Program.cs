@@ -31,6 +31,18 @@ app.UseRouting();
 
 app.MapRazorPages();
 app.MapBlazorHub();
+
+// API endpoint to serve recipe images separately for performance
+app.MapGet("/api/recipe/{id}/image", async (int id, RecipeService recipeService) =>
+{
+    var (imageData, contentType) = await recipeService.GetRecipeImageAsync(id);
+    if (imageData == null || contentType == null)
+    {
+        return Results.NotFound();
+    }
+    return Results.File(imageData, contentType);
+});
+
 app.MapFallbackToPage("/_Host");
 
 // Ensure database is created

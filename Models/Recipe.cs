@@ -29,5 +29,11 @@ public class Recipe
     public DateTime CreatedDate { get; set; } = DateTime.Now;
 
     public DateTime ModifiedDate { get; set; } = DateTime.Now;
+
+    // Optional background image stored as BLOB
+    public byte[]? ImageData { get; set; }
+
+    // Image content type (e.g., "image/jpeg", "image/png")
+    public string? ImageContentType { get; set; }
 }
 

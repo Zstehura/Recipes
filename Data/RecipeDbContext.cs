@@ -26,6 +26,9 @@ public class RecipeDbContext : DbContext
             entity.Property(e => e.Instructions).IsRequired();
             entity.Property(e => e.CookingTime).IsRequired();
             entity.Property(e => e.Servings).IsRequired();
+            // Configure ImageData as BLOB (SQLite stores byte[] as BLOB automatically)
+            entity.Property(e => e.ImageData).HasColumnType("BLOB");
+            entity.Property(e => e.ImageContentType).HasMaxLength(100);
         });
 
         // Configure Ingredient entity

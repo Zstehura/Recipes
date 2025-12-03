@@ -1,6 +1,6 @@
 {
   "Version": 1,
-  "Hash": "wGkSg10sm3N7feyo6sHnqLem532h2ghJuhuApTI0Q5w=",
+  "Hash": "5V1PBwilH+oxmAZrnmHeAZ17I14YH5VaTLm3qCoU7ys=",
   "Source": "RecipesApp",
   "BasePath": "_content/RecipesApp",
   "Mode": "Default",
@@ -10,17 +10,17 @@
     {
       "Name": "RecipesApp\\wwwroot",
       "Source": "RecipesApp",
-      "ContentRoot": "C:\\Users\\zacks\\OneDrive\\Documents\\Cursor Projects\\Recipes\\wwwroot\\",
+      "ContentRoot": "C:\\Users\\zacks\\Coding Projects\\Recipes\\Recipes\\wwwroot\\",
       "BasePath": "_content/RecipesApp",
       "Pattern": "**"
     }
   ],
   "Assets": [
     {
-      "Identity": "C:\\Users\\zacks\\OneDrive\\Documents\\Cursor Projects\\Recipes\\wwwroot\\css\\app.css",
+      "Identity": "C:\\Users\\zacks\\Coding Projects\\Recipes\\Recipes\\wwwroot\\css\\app.css",
       "SourceId": "RecipesApp",
       "SourceType": "Discovered",
-      "ContentRoot": "C:\\Users\\zacks\\OneDrive\\Documents\\Cursor Projects\\Recipes\\wwwroot\\",
+      "ContentRoot": "C:\\Users\\zacks\\Coding Projects\\Recipes\\Recipes\\wwwroot\\",
       "BasePath": "_content/RecipesApp",
       "RelativePath": "css/app#[.{fingerprint}]?.css",
       "AssetKind": "All",
@@ -38,10 +38,10 @@
       "OriginalItemSpec": "wwwroot\\css\\app.css"
     },
     {
-      "Identity": "C:\\Users\\zacks\\OneDrive\\Documents\\Cursor Projects\\Recipes\\wwwroot\\css\\bootstrap\\bootstrap.min.css",
+      "Identity": "C:\\Users\\zacks\\Coding Projects\\Recipes\\Recipes\\wwwroot\\css\\bootstrap\\bootstrap.min.css",
       "SourceId": "RecipesApp",
       "SourceType": "Discovered",
-      "ContentRoot": "C:\\Users\\zacks\\OneDrive\\Documents\\Cursor Projects\\Recipes\\wwwroot\\",
+      "ContentRoot": "C:\\Users\\zacks\\Coding Projects\\Recipes\\Recipes\\wwwroot\\",
       "BasePath": "_content/RecipesApp",
       "RelativePath": "css/bootstrap/bootstrap.min#[.{fingerprint}]?.css",
       "AssetKind": "All",
@@ -62,7 +62,7 @@
   "Endpoints": [
     {
       "Route": "css/app.8pgffw5azx.css",
-      "AssetFile": "C:\\Users\\zacks\\OneDrive\\Documents\\Cursor Projects\\Recipes\\wwwroot\\css\\app.css",
+      "AssetFile": "C:\\Users\\zacks\\Coding Projects\\Recipes\\Recipes\\wwwroot\\css\\app.css",
       "Selectors": [],
       "ResponseHeaders": [
         {
@@ -83,7 +83,7 @@
         },
         {
           "Name": "Last-Modified",
-          "Value": "Mon, 24 Nov 2025 02:41:42 GMT"
+          "Value": "Mon, 24 Nov 2025 15:57:31 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -107,7 +107,7 @@
     },
     {
       "Route": "css/app.css",
-      "AssetFile": "C:\\Users\\zacks\\OneDrive\\Documents\\Cursor Projects\\Recipes\\wwwroot\\css\\app.css",
+      "AssetFile": "C:\\Users\\zacks\\Coding Projects\\Recipes\\Recipes\\wwwroot\\css\\app.css",
       "Selectors": [],
       "ResponseHeaders": [
         {
@@ -128,7 +128,7 @@
         },
         {
           "Name": "Last-Modified",
-          "Value": "Mon, 24 Nov 2025 02:41:42 GMT"
+          "Value": "Mon, 24 Nov 2025 15:57:31 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -144,7 +144,7 @@
     },
     {
       "Route": "css/bootstrap/bootstrap.min.css",
-      "AssetFile": "C:\\Users\\zacks\\OneDrive\\Documents\\Cursor Projects\\Recipes\\wwwroot\\css\\bootstrap\\bootstrap.min.css",
+      "AssetFile": "C:\\Users\\zacks\\Coding Projects\\Recipes\\Recipes\\wwwroot\\css\\bootstrap\\bootstrap.min.css",
       "Selectors": [],
       "ResponseHeaders": [
         {
@@ -165,7 +165,7 @@
         },
         {
           "Name": "Last-Modified",
-          "Value": "Sun, 23 Nov 2025 01:11:42 GMT"
+          "Value": "Mon, 24 Nov 2025 15:57:31 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -181,7 +181,7 @@
     },
     {
       "Route": "css/bootstrap/bootstrap.min.l5schbilk4.css",
-      "AssetFile": "C:\\Users\\zacks\\OneDrive\\Documents\\Cursor Projects\\Recipes\\wwwroot\\css\\bootstrap\\bootstrap.min.css",
+      "AssetFile": "C:\\Users\\zacks\\Coding Projects\\Recipes\\Recipes\\wwwroot\\css\\bootstrap\\bootstrap.min.css",
       "Selectors": [],
       "ResponseHeaders": [
         {
@@ -202,7 +202,7 @@
         },
         {
           "Name": "Last-Modified",
-          "Value": "Sun, 23 Nov 2025 01:11:42 GMT"
+          "Value": "Mon, 24 Nov 2025 15:57:31 GMT"
         },
         {
           "Name": "Cache-Control",
