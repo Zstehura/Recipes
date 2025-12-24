@@ -213,36 +213,67 @@ a {
     top: -2px;
 }
 
+.nav-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 0.5rem;
+}
+
+.nav-title {
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0;
+}
+
 .nav-item {
     font-size: 0.9rem;
     padding-bottom: 0.5rem;
 }
 
 .nav-item:first-of-type {
-    padding-top: 1rem;
+    padding-top: 0.5rem;
 }
 
 .nav-item:last-of-type {
     padding-bottom: 1rem;
 }
 
-.nav-item ::deep a {
+.nav-item ::deep .nav-button,
+.nav-button {
     color: #d7d7d7;
-    border-radius: 4px;
+    border-radius: 6px;
     height: 3rem;
     display: flex;
     align-items: center;
-    line-height: 3rem;
+    padding: 0 1rem;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+    background-color: rgba(255, 255, 255, 0.05);
+    font-weight: 500;
 }
 
-.nav-item ::deep a.active {
-    background-color: rgba(255, 255, 255, 0.25);
+.nav-item ::deep .nav-button:hover,
+.nav-button:hover {
+    background-color: rgba(255, 255, 255, 0.15);
     color: white;
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateX(2px);
 }
 
-.nav-item ::deep a:hover {
-    background-color: rgba(255, 255, 255, 0.1);
+.nav-item ::deep .nav-button.active,
+.nav-button.active {
+    background-color: rgba(255, 255, 255, 0.3);
     color: white;
+    border-color: rgba(255, 255, 255, 0.4);
+    font-weight: 600;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.nav-item ::deep .nav-button span,
+.nav-button span {
+    margin-right: 0.5rem;
+    font-size: 1rem;
 }
 
 @media (max-width: 640.98px) {
