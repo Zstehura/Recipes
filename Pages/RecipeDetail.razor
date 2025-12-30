@@ -1,0 +1,139 @@
+@page "/recipe/{Id}"
+@using RecipesApp.Models
+@using RecipesApp.Services
+@inject RecipeService RecipeService
+@inject NavigationManager Navigation
+
+<PageTitle>@(recipe?.Name ?? "Recipe")</PageTitle>
+
+@if (recipe == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="mb-3">
+        <a href="/" class="btn btn-outline-secondary">
+            <span class="bi bi-arrow-left"></span> Back to Recipes
+        </a>
+        <a href="/recipe/@recipe.Id/edit" class="btn btn-primary ms-2">
+            <span class="bi bi-pencil"></span> Edit Recipe
+        </a>
+    </div>
+
+    <div class="card">
+        @if (recipe.ImageContentType != null)
+        {
+            <img src="/api/recipe/@recipe.Id/image" alt="@recipe.Name" class="card-img-top" style="max-height: 400px; object-fit: cover; width: 100%;" />
+        }
+        <div class="card-header">
+            <h1 class="mb-0">@recipe.Name</h1>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <p class="mb-1">
+                        <strong><span class="bi bi-clock"></span> Cooking Time:</strong> @recipe.CookingTime minutes
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <p class="mb-1">
+                        <strong><span class="bi bi-people"></span> Servings:</strong> @recipe.Servings
+                    </p>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(recipe.Tags))
+            {
+                <div class="mb-3">
+                    <strong>Tags:</strong>
+                    @foreach (var tag in recipe.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                    {
+                        <span class="badge bg-secondary me-1">@tag</span>
+                    }
+                </div>
+            }
+
+            <div class="mb-4">
+                <h3>Ingredients</h3>
+                <div class="ingredients-list">
+                    @foreach (var recipeIngredient in recipe.RecipeIngredients)
+                    {
+                        <div class="ingredient-item">
+                            @if (recipeIngredient.Quantity.HasValue && !string.IsNullOrWhiteSpace(recipeIngredient.Unit))
+                            {
+                                // Convert from base unit to display unit
+                                var (displayQuantity, displayUnit) = UnitConversionService.ConvertFromBaseUnit(
+                                    recipeIngredient.Quantity.Value, 
+                                    recipeIngredient.Unit);
+                                <strong>@displayQuantity.ToString("0.##") @UnitConversionService.GetUnitDisplayName(displayUnit)</strong> @recipeIngredient.Ingredient.Name
+                            }
+                            else
+                            {
+                                @recipeIngredient.Ingredient.Name
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <h3>Instructions</h3>
+                <div class="instructions-text">
+                    @foreach (var instruction in recipe.Instructions.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                    {
+                        <p>@instruction</p>
+                    }
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(recipe.Notes))
+            {
+                <div class="mb-3">
+                    <h4>Notes</h4>
+                    <div class="notes-text">
+                        @foreach (var note in recipe.Notes.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                        {
+                            <p>@note</p>
+                        }
+                    </div>
+                </div>
+            }
+
+            <div class="text-muted small mt-4">
+                <p>Created: @recipe.CreatedDate.ToString("MMMM dd, yyyy")</p>
+                <p>Last Modified: @recipe.ModifiedDate.ToString("MMMM dd, yyyy")</p>
+            </div>
+        </div>
+        <div class="card-footer">
+            <button class="btn btn-danger" @onclick="DeleteRecipe">
+                <span class="bi bi-trash"></span> Delete Recipe
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Recipe? recipe;
+
+    protected override async Task OnInitializedAsync()
+    {
+        recipe = await RecipeService.GetRecipeByIdAsync(Id);
+        if (recipe == null)
+        {
+            Navigation.NavigateTo("/");
+        }
+    }
+
+    private async Task DeleteRecipe()
+    {
+        if (await RecipeService.DeleteRecipeAsync(Id))
+        {
+            Navigation.NavigateTo("/");
+        }
+    }
+}
+
