@@ -1,6 +1,0 @@
-obj/Debug/*
-bin/Debug/*
-Data/recipes.db
-obj/project.assets.json
-obj/project.nuget.cache
-obj/RecipesApp.csproj.nuget.dgspec.json
