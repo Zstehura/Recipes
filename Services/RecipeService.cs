@@ -223,7 +223,7 @@ public class RecipeService
             .FirstOrDefaultAsync();
     }
 
-    // Maximum image size: 2MB
-    public const int MaxImageSizeBytes = 2 * 1024 * 1024;
+    // Maximum image size: 10MB
+    public const int MaxImageSizeBytes = 10 * 1024 * 1024;
 }
 

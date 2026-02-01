@@ -1,12 +1,19 @@
 using Microsoft.EntityFrameworkCore;
 using RecipesApp.Data;
 using RecipesApp.Services;
+using Microsoft.AspNetCore.SignalR;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
+
+// Configure form options to allow larger file uploads (10MB)
+builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 10 * 1024 * 1024; // 10MB
+});
 
 // Add Entity Framework
 builder.Services.AddDbContext<RecipeDbContext>(options =>
@@ -30,7 +37,10 @@ app.UseStaticFiles();
 app.UseRouting();
 
 app.MapRazorPages();
-app.MapBlazorHub();
+app.MapBlazorHub(options =>
+{
+    options.MaximumReceiveMessageSize = 10 * 1024 * 1024; // 10MB
+});
 
 // API endpoint to serve recipe images separately for performance
 app.MapGet("/api/recipe/{id}/image", async (int id, RecipeService recipeService) =>

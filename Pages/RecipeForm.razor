@@ -26,7 +26,7 @@
             <div class="mb-3">
                 <label class="form-label" for="image">Background Image (Optional)</label>
                 <InputFile id="image" class="form-control" OnChange="HandleImageUpload" accept="image/*" />
-                <small class="form-text text-muted">Maximum size: 2MB. Supported formats: JPEG, PNG, GIF</small>
+                <small class="form-text text-muted">Maximum size: 10MB. Supported formats: JPEG, PNG, GIF</small>
                 @if (!string.IsNullOrEmpty(imageError))
                 {
                     <div class="text-danger small mt-1">@imageError</div>
