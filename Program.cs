@@ -7,11 +7,12 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
-builder.Services.AddSignalR(options =>
-{
-    options.MaximumReceiveMessageSize = 10 * 1024 * 1024; // 10MB
-});
 builder.Services.AddServerSideBlazor();
+builder.Services.AddSignalR()
+    .AddHubOptions<Microsoft.AspNetCore.SignalR.Hub>(options =>
+    {
+        options.MaximumReceiveMessageSize = 10 * 1024 * 1024; // 10MB
+    });
 
 // Configure form options to allow larger file uploads (10MB)
 builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>

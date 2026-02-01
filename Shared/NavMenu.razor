@@ -1,23 +1,66 @@
+@inject NavigationManager Navigation
+@implements IDisposable
+
 <div class="nav-scrollable">
     <div class="nav-header px-3 py-3">
         <h2 class="nav-title">Recipes App</h2>
     </div>
     <nav class="flex-column">
         <div class="nav-item px-3">
-            <NavLink href="" Match="NavLinkMatch.All" class="nav-button">
+            <button class="nav-button @(IsActiveRoute("/") ? "active" : "")" @onclick="@(() => NavigateTo("/"))">
                 <span class="bi bi-list-ul" aria-hidden="true"></span> All Recipes
-            </NavLink>
+            </button>
         </div>
         <div class="nav-item px-3">
-            <NavLink href="recipe/new" class="nav-button">
+            <button class="nav-button @(IsActiveRoute("/recipe/new") ? "active" : "")" @onclick="@(() => NavigateTo("/recipe/new"))">
                 <span class="bi bi-plus-circle" aria-hidden="true"></span> New Recipe
-            </NavLink>
+            </button>
         </div>
         <div class="nav-item px-3">
-            <NavLink href="ingredients" class="nav-button">
+            <button class="nav-button @(IsActiveRoute("/ingredients") ? "active" : "")" @onclick="@(() => NavigateTo("/ingredients"))">
                 <span class="bi bi-list-check" aria-hidden="true"></span> Ingredients
-            </NavLink>
+            </button>
         </div>
     </nav>
 </div>
 
+@code {
+    protected override void OnInitialized()
+    {
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
+    }
+
+    private string GetCurrentUri()
+    {
+        var uri = Navigation.ToBaseRelativePath(Navigation.Uri);
+        return "/" + uri.TrimStart('/');
+    }
+
+    private bool IsActiveRoute(string route)
+    {
+        var currentUri = GetCurrentUri();
+        
+        if (route == "/")
+        {
+            return currentUri == "/" || string.IsNullOrEmpty(currentUri.TrimStart('/'));
+        }
+        
+        return currentUri.Equals(route, StringComparison.OrdinalIgnoreCase) ||
+               currentUri.StartsWith(route + "/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void NavigateTo(string route)
+    {
+        Navigation.NavigateTo(route);
+    }
+}

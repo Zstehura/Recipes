@@ -48,35 +48,37 @@
                     @for (int i = 0; i < ingredientEntries.Count; i++)
                     {
                         var index = i;
-                        <div class="row mb-2 align-items-end g-2">
-                            <div class="col-6 col-md-4">
-                                <label class="form-label small">Quantity</label>
-                                <InputNumber class="form-control form-control-sm" 
-                                    @bind-Value="ingredientEntries[index].Quantity" 
-                                    placeholder="0" />
-                            </div>
-                            <div class="col-6 col-md-4">
-                                <label class="form-label small">Unit</label>
-                                <InputSelect class="form-select form-select-sm" 
-                                    @bind-Value="ingredientEntries[index].Unit">
-                                    @foreach (var unit in Enum.GetValues<MeasurementUnit>())
-                                    {
-                                        <option value="@unit">@UnitConversionService.GetUnitDisplayName(unit)</option>
-                                    }
-                                </InputSelect>
-                            </div>
-                            <div class="col-10 col-md-3">
-                                <label class="form-label small">Ingredient Name</label>
-                                <InputText class="form-control form-control-sm" 
-                                    @bind-Value="ingredientEntries[index].Name" 
-                                    placeholder="e.g., flour" />
-                            </div>
-                            <div class="col-2 col-md-1">
-                                <label class="form-label small d-block d-md-none">&nbsp;</label>
-                                <button type="button" class="btn btn-sm btn-outline-danger w-100" 
-                                    @onclick="() => RemoveIngredient(index)" title="Remove">
-                                    <span class="bi bi-trash"></span>
-                                </button>
+                        <div class="ingredient-entry">
+                            <div class="row align-items-end g-2">
+                                <div class="col-6 col-md-4">
+                                    <label class="form-label small">Quantity</label>
+                                    <InputNumber class="form-control form-control-sm" 
+                                        @bind-Value="ingredientEntries[index].Quantity" 
+                                        placeholder="0" />
+                                </div>
+                                <div class="col-6 col-md-4">
+                                    <label class="form-label small">Unit</label>
+                                    <InputSelect class="form-select form-select-sm" 
+                                        @bind-Value="ingredientEntries[index].Unit">
+                                        @foreach (var unit in Enum.GetValues<MeasurementUnit>())
+                                        {
+                                            <option value="@unit">@UnitConversionService.GetUnitDisplayName(unit)</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+                                <div class="col-10 col-md-3">
+                                    <label class="form-label small">Ingredient Name</label>
+                                    <InputText class="form-control form-control-sm" 
+                                        @bind-Value="ingredientEntries[index].Name" 
+                                        placeholder="e.g., flour" />
+                                </div>
+                                <div class="col-2 col-md-1">
+                                    <label class="form-label small d-block d-md-none">&nbsp;</label>
+                                    <button type="button" class="btn btn-sm btn-outline-danger w-100" 
+                                        @onclick="() => RemoveIngredient(index)" title="Remove">
+                                        <span class="bi bi-trash"></span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     }
