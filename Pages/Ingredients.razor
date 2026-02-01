@@ -7,7 +7,7 @@
 <PageTitle>Ingredients</PageTitle>
 
 <div class="mb-3">
-    <h1>Ingredients Management</h1>
+    <h1 class="h3 mb-2">Ingredients Management</h1>
     <a href="/" class="btn btn-outline-secondary">
         <span class="bi bi-arrow-left"></span> Back to Recipes
     </a>
@@ -32,7 +32,7 @@ else
             {
                 <div class="table-responsive">
                     <table class="table table-hover">
-                        <thead>
+                        <thead class="d-none d-md-table-header-group">
                             <tr>
                                 <th>Name</th>
                                 <th>Default Unit</th>
@@ -43,8 +43,9 @@ else
                         <tbody>
                             @foreach (var ingredient in ingredients)
                             {
-                                <tr>
-                                    <td>
+                                <tr class="d-block d-md-table-row mb-3 mb-md-0">
+                                    <td class="d-block d-md-table-cell border-0 border-md-1 pb-2 pb-md-0">
+                                        <strong class="d-md-none">Name: </strong>
                                         @if (editingIngredientId == ingredient.Id)
                                         {
                                             <div class="input-group">
@@ -64,7 +65,8 @@ else
                                             <strong>@ingredient.Name</strong>
                                         }
                                     </td>
-                                    <td>
+                                    <td class="d-block d-md-table-cell border-0 border-md-1 pb-2 pb-md-0">
+                                        <strong class="d-md-none">Default Unit: </strong>
                                         @if (editingUnitId == ingredient.Id)
                                         {
                                             <div class="input-group">
@@ -87,7 +89,8 @@ else
                                             @UnitConversionService.GetUnitDisplayName(ingredient.DefaultUnit)
                                         }
                                     </td>
-                                    <td>
+                                    <td class="d-block d-md-table-cell border-0 border-md-1 pb-2 pb-md-0">
+                                        <strong class="d-md-none">Used In Recipes: </strong>
                                         @{
                                             var usageCount = ingredientUsageCounts.GetValueOrDefault(ingredient.Id, 0);
                                         }
@@ -100,8 +103,9 @@ else
                                             <span class="text-muted">Not used</span>
                                         }
                                     </td>
-                                    <td>
-                                        <div class="btn-group btn-group-sm" role="group">
+                                    <td class="d-block d-md-table-cell border-0 pb-2 pb-md-0">
+                                        <strong class="d-md-none d-block mb-2">Actions: </strong>
+                                        <div class="btn-group btn-group-sm flex-wrap" role="group">
                                             <button class="btn btn-outline-primary" @onclick="() => StartEditName(ingredient.Id, ingredient.Name)" 
                                                     title="Rename">
                                                 <span class="bi bi-pencil"></span>

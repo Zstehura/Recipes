@@ -7,12 +7,12 @@
 <PageTitle>Recipes</PageTitle>
 
 <div class="mb-3">
-    <div class="row">
-        <div class="col-md-6">
+    <div class="row g-2">
+        <div class="col-12 col-md-6">
             <input type="text" class="form-control" placeholder="Search recipes..." @bind="searchTerm" @bind:event="oninput" @bind:after="LoadRecipes" />
         </div>
-        <div class="col-md-6 text-end">
-            <a href="/recipe/new" class="btn btn-primary">
+        <div class="col-12 col-md-6 text-md-end">
+            <a href="/recipe/new" class="btn btn-primary w-100 w-md-auto">
                 <span class="bi bi-plus-circle"></span> Add New Recipe
             </a>
         </div>
@@ -31,10 +31,10 @@ else if (!recipes.Any())
 }
 else
 {
-    <div class="row">
+    <div class="row g-3">
         @foreach (var recipe in recipes)
         {
-            <div class="col-md-6 col-lg-4 mb-4">
+            <div class="col-12 col-sm-6 col-lg-4">
                 <div class="card h-100 recipe-card">
                     @if (recipe.ImageContentType != null)
                     {
@@ -61,11 +61,11 @@ else
                             @(recipe.Instructions.Length > 100 ? recipe.Instructions.Substring(0, 100) + "..." : recipe.Instructions)
                         </p>
                     </div>
-                    <div class="card-footer bg-transparent">
-                        <div class="btn-group w-100" role="group">
-                            <a href="/recipe/@recipe.Id" class="btn btn-sm btn-outline-primary">View</a>
-                            <a href="/recipe/@recipe.Id/edit" class="btn btn-sm btn-outline-secondary">Edit</a>
-                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteRecipe(recipe.Id)">Delete</button>
+                    <div class="card-footer bg-transparent p-2">
+                        <div class="d-grid gap-2 d-md-flex">
+                            <a href="/recipe/@recipe.Id" class="btn btn-sm btn-outline-primary flex-fill">View</a>
+                            <a href="/recipe/@recipe.Id/edit" class="btn btn-sm btn-outline-secondary flex-fill">Edit</a>
+                            <button class="btn btn-sm btn-outline-danger flex-fill" @onclick="() => DeleteRecipe(recipe.Id)">Delete</button>
                         </div>
                     </div>
                 </div>

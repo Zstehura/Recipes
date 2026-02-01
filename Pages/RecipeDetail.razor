@@ -12,11 +12,11 @@
 }
 else
 {
-    <div class="mb-3">
+    <div class="mb-3 d-flex flex-column flex-sm-row gap-2">
         <a href="/" class="btn btn-outline-secondary">
             <span class="bi bi-arrow-left"></span> Back to Recipes
         </a>
-        <a href="/recipe/@recipe.Id/edit" class="btn btn-primary ms-2">
+        <a href="/recipe/@recipe.Id/edit" class="btn btn-primary">
             <span class="bi bi-pencil"></span> Edit Recipe
         </a>
     </div>
@@ -30,13 +30,13 @@ else
             <h1 class="mb-0">@recipe.Name</h1>
         </div>
         <div class="card-body">
-            <div class="row mb-3">
-                <div class="col-md-6">
+            <div class="row mb-3 g-2">
+                <div class="col-12 col-md-6">
                     <p class="mb-1">
                         <strong><span class="bi bi-clock"></span> Cooking Time:</strong> @recipe.CookingTime minutes
                     </p>
                 </div>
-                <div class="col-md-6">
+                <div class="col-12 col-md-6">
                     <p class="mb-1">
                         <strong><span class="bi bi-people"></span> Servings:</strong> @recipe.Servings
                     </p>

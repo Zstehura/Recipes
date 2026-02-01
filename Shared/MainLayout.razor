@@ -1,9 +1,21 @@
 @inherits LayoutComponentBase
 
 <div class="page">
-    <div class="sidebar">
+    <div class="top-row px-4">
+        <button class="navbar-toggler d-md-none" @onclick="ToggleSidebar">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <span class="navbar-brand d-md-none">Recipes App</span>
+    </div>
+    
+    <div class="sidebar @(sidebarVisible ? "show" : "")">
         <NavMenu />
     </div>
+    
+    @if (sidebarVisible)
+    {
+        <div class="sidebar-overlay" @onclick="ToggleSidebar"></div>
+    }
 
     <main>
         <article class="content px-4">
@@ -12,3 +24,11 @@
     </main>
 </div>
 
+@code {
+    private bool sidebarVisible = false;
+
+    private void ToggleSidebar()
+    {
+        sidebarVisible = !sidebarVisible;
+    }
+}
