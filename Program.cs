@@ -7,6 +7,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
+builder.Services.AddSignalR(options =>
+{
+    options.MaximumReceiveMessageSize = 10 * 1024 * 1024; // 10MB
+});
 builder.Services.AddServerSideBlazor();
 
 // Configure form options to allow larger file uploads (10MB)
@@ -38,10 +42,7 @@ app.UseStaticFiles();
 app.UseRouting();
 
 app.MapRazorPages();
-app.MapBlazorHub(options =>
-{
-    options.MaximumReceiveMessageSize = 10 * 1024 * 1024; // 10MB
-});
+app.MapBlazorHub();
 
 // API endpoint to serve recipe images separately for performance
 app.MapGet("/api/recipe/{id}/image", async (int id, RecipeService recipeService) =>

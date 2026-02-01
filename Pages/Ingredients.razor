@@ -1,0 +1,310 @@
+@page "/ingredients"
+@using RecipesApp.Models
+@using RecipesApp.Services
+@inject IngredientService IngredientService
+@inject NavigationManager Navigation
+
+<PageTitle>Ingredients</PageTitle>
+
+<div class="mb-3">
+    <h1>Ingredients Management</h1>
+    <a href="/" class="btn btn-outline-secondary">
+        <span class="bi bi-arrow-left"></span> Back to Recipes
+    </a>
+</div>
+
+@if (ingredients == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="card">
+        <div class="card-header">
+            <h3 class="mb-0">All Ingredients (@ingredients.Count)</h3>
+        </div>
+        <div class="card-body">
+            @if (ingredients.Count == 0)
+            {
+                <p class="text-muted">No ingredients found. Ingredients will be created automatically when you add recipes.</p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Default Unit</th>
+                                <th>Used In Recipes</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var ingredient in ingredients)
+                            {
+                                <tr>
+                                    <td>
+                                        @if (editingIngredientId == ingredient.Id)
+                                        {
+                                            <div class="input-group">
+                                                <input type="text" class="form-control form-control-sm" 
+                                                       @bind="editingIngredientName" 
+                                                       @bind:event="oninput" />
+                                                <button class="btn btn-sm btn-success" @onclick="() => SaveIngredientName(ingredient.Id)">
+                                                    <span class="bi bi-check"></span>
+                                                </button>
+                                                <button class="btn btn-sm btn-secondary" @onclick="CancelEdit">
+                                                    <span class="bi bi-x"></span>
+                                                </button>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <strong>@ingredient.Name</strong>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (editingUnitId == ingredient.Id)
+                                        {
+                                            <div class="input-group">
+                                                <select class="form-select form-select-sm" @bind="editingIngredientUnit">
+                                                    @foreach (var unit in Enum.GetValues<MeasurementUnit>())
+                                                    {
+                                                        <option value="@unit">@UnitConversionService.GetUnitDisplayName(unit)</option>
+                                                    }
+                                                </select>
+                                                <button class="btn btn-sm btn-success" @onclick="() => SaveIngredientUnit(ingredient.Id)">
+                                                    <span class="bi bi-check"></span>
+                                                </button>
+                                                <button class="btn btn-sm btn-secondary" @onclick="CancelEdit">
+                                                    <span class="bi bi-x"></span>
+                                                </button>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            @UnitConversionService.GetUnitDisplayName(ingredient.DefaultUnit)
+                                        }
+                                    </td>
+                                    <td>
+                                        @{
+                                            var usageCount = ingredientUsageCounts.GetValueOrDefault(ingredient.Id, 0);
+                                        }
+                                        @if (usageCount > 0)
+                                        {
+                                            <span class="badge bg-primary">@usageCount recipe(s)</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Not used</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button class="btn btn-outline-primary" @onclick="() => StartEditName(ingredient.Id, ingredient.Name)" 
+                                                    title="Rename">
+                                                <span class="bi bi-pencil"></span>
+                                            </button>
+                                            <button class="btn btn-outline-secondary" @onclick="() => StartEditUnit(ingredient.Id, ingredient.DefaultUnit)" 
+                                                    title="Change Default Unit">
+                                                <span class="bi bi-arrow-repeat"></span>
+                                            </button>
+                                            <button class="btn btn-outline-info" @onclick="() => ShowMergeDialog(ingredient.Id)" 
+                                                    title="Merge with Another Ingredient">
+                                                <span class="bi bi-arrow-left-right"></span>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@* Merge Dialog *@
+@if (showMergeDialog)
+{
+    <div class="modal show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Merge Ingredients</h5>
+                    <button type="button" class="btn-close" @onclick="CloseMergeDialog"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Select the ingredient to merge <strong>@(mergingSourceIngredient?.Name ?? "")</strong> into:</p>
+                    <select class="form-select" @bind="mergingTargetId">
+                        <option value="0">-- Select Ingredient --</option>
+                        @foreach (var ingredient in ingredients.Where(i => i.Id != mergingSourceId))
+                        {
+                            <option value="@ingredient.Id">@ingredient.Name</option>
+                        }
+                    </select>
+                    <div class="alert alert-warning mt-3">
+                        <strong>Warning:</strong> This will merge all recipes using <strong>@(mergingSourceIngredient?.Name ?? "")</strong> 
+                        into the selected ingredient. This action cannot be undone.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseMergeDialog">Cancel</button>
+                    <button type="button" class="btn btn-primary" @onclick="ConfirmMerge" disabled="@(mergingTargetId == 0)">
+                        Merge Ingredients
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* Success/Error Messages *@
+@if (!string.IsNullOrEmpty(message))
+{
+    <div class="alert @(isError ? "alert-danger" : "alert-success") alert-dismissible fade show mt-3" role="alert">
+        @message
+        <button type="button" class="btn-close" @onclick="ClearMessage"></button>
+    </div>
+}
+
+@code {
+    private List<Ingredient>? ingredients;
+    private Dictionary<int, int> ingredientUsageCounts = new();
+    private int? editingIngredientId = null;
+    private int? editingUnitId = null;
+    private string editingIngredientName = string.Empty;
+    private MeasurementUnit editingIngredientUnit = MeasurementUnit.Pieces;
+    private bool showMergeDialog = false;
+    private int? mergingSourceId = null;
+    private int mergingTargetId = 0;
+    private Ingredient? mergingSourceIngredient = null;
+    private string message = string.Empty;
+    private bool isError = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadIngredientsAsync();
+    }
+
+    private async Task LoadIngredientsAsync()
+    {
+        ingredients = await IngredientService.GetAllIngredientsAsync();
+        ingredientUsageCounts.Clear();
+        
+        if (ingredients != null)
+        {
+            foreach (var ingredient in ingredients)
+            {
+                var count = await IngredientService.GetIngredientUsageCountAsync(ingredient.Id);
+                ingredientUsageCounts[ingredient.Id] = count;
+            }
+        }
+    }
+
+    private void StartEditName(int id, string currentName)
+    {
+        editingIngredientId = id;
+        editingIngredientName = currentName;
+        editingUnitId = null;
+    }
+
+    private void StartEditUnit(int id, MeasurementUnit currentUnit)
+    {
+        editingUnitId = id;
+        editingIngredientUnit = currentUnit;
+        editingIngredientId = null;
+    }
+
+    private void CancelEdit()
+    {
+        editingIngredientId = null;
+        editingUnitId = null;
+        editingIngredientName = string.Empty;
+    }
+
+    private async Task SaveIngredientName(int id)
+    {
+        if (string.IsNullOrWhiteSpace(editingIngredientName))
+        {
+            ShowMessage("Ingredient name cannot be empty.", true);
+            return;
+        }
+
+        var success = await IngredientService.RenameIngredientAsync(id, editingIngredientName.Trim());
+        if (success)
+        {
+            ShowMessage("Ingredient renamed successfully. All recipes using this ingredient have been updated.");
+            await LoadIngredientsAsync();
+            CancelEdit();
+        }
+        else
+        {
+            ShowMessage("Failed to rename ingredient. Another ingredient with this name may already exist.", true);
+        }
+    }
+
+    private async Task SaveIngredientUnit(int id)
+    {
+        var success = await IngredientService.ChangeDefaultUnitAsync(id, editingIngredientUnit);
+        if (success)
+        {
+            ShowMessage("Default unit updated successfully.");
+            await LoadIngredientsAsync();
+            CancelEdit();
+        }
+        else
+        {
+            ShowMessage("Failed to update default unit.", true);
+        }
+    }
+
+    private void ShowMergeDialog(int sourceId)
+    {
+        mergingSourceId = sourceId;
+        mergingSourceIngredient = ingredients?.FirstOrDefault(i => i.Id == sourceId);
+        mergingTargetId = 0;
+        showMergeDialog = true;
+    }
+
+    private void CloseMergeDialog()
+    {
+        showMergeDialog = false;
+        mergingSourceId = null;
+        mergingSourceIngredient = null;
+        mergingTargetId = 0;
+    }
+
+    private async Task ConfirmMerge()
+    {
+        if (mergingSourceId == null || mergingTargetId == 0)
+            return;
+
+        var success = await IngredientService.MergeIngredientsAsync(mergingTargetId, mergingSourceId.Value);
+        if (success)
+        {
+            ShowMessage("Ingredients merged successfully. All recipes have been updated.");
+            CloseMergeDialog();
+            await LoadIngredientsAsync();
+        }
+        else
+        {
+            ShowMessage("Failed to merge ingredients.", true);
+        }
+    }
+
+    private void ShowMessage(string msg, bool error = false)
+    {
+        message = msg;
+        isError = error;
+        // Auto-clear message after 5 seconds
+        Task.Delay(5000).ContinueWith(_ => InvokeAsync(() => { message = string.Empty; StateHasChanged(); }));
+    }
+
+    private void ClearMessage()
+    {
+        message = string.Empty;
+    }
+}
