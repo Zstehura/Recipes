@@ -19,8 +19,9 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(optio
 builder.Services.AddDbContext<RecipeDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Add Recipe Service
+// Add Services
 builder.Services.AddScoped<RecipeService>();
+builder.Services.AddScoped<IngredientService>();
 
 var app = builder.Build();
 

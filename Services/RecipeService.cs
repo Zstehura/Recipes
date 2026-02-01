@@ -175,7 +175,12 @@ public class RecipeService
 
             if (ingredient == null)
             {
-                ingredient = new Ingredient { Name = entry.Name };
+                // Use the unit from the entry as the default unit for the new ingredient
+                ingredient = new Ingredient 
+                { 
+                    Name = entry.Name,
+                    DefaultUnit = entry.Unit
+                };
                 _context.Ingredients.Add(ingredient);
             }
 

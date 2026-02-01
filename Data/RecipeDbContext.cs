@@ -37,6 +37,9 @@ public class RecipeDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
             entity.HasIndex(e => e.Name).IsUnique();
+            entity.Property(e => e.DefaultUnit)
+                .HasConversion<int>()
+                .IsRequired();
         });
 
         // Configure RecipeIngredient join table
