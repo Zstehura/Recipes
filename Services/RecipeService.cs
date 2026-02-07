@@ -162,6 +162,99 @@ public class RecipeService
             .ToListAsync();
     }
 
+    public async Task<List<Recipe>> FilterRecipesAsync(
+        string? searchTerm = null,
+        int? minCookTime = null,
+        int? maxCookTime = null,
+        List<string>? tags = null,
+        int? minServings = null,
+        int? maxServings = null)
+    {
+        var query = _context.Recipes
+            .Include(r => r.RecipeIngredients)
+                .ThenInclude(ri => ri.Ingredient)
+            .AsQueryable();
+
+        // Apply search term filter
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var lowerSearchTerm = searchTerm.ToLower();
+            query = query.Where(r => r.Name.ToLower().Contains(lowerSearchTerm) ||
+                                   r.RecipeIngredients.Any(ri => ri.Ingredient.Name.ToLower().Contains(lowerSearchTerm)) ||
+                                   r.Tags.ToLower().Contains(lowerSearchTerm));
+        }
+
+        // Apply cook time filters
+        if (minCookTime.HasValue)
+        {
+            query = query.Where(r => r.CookingTime >= minCookTime.Value);
+        }
+        if (maxCookTime.HasValue)
+        {
+            query = query.Where(r => r.CookingTime <= maxCookTime.Value);
+        }
+
+        // Apply serving count filters
+        if (minServings.HasValue)
+        {
+            query = query.Where(r => r.Servings >= minServings.Value);
+        }
+        if (maxServings.HasValue)
+        {
+            query = query.Where(r => r.Servings <= maxServings.Value);
+        }
+
+        // Apply tag filters (matches if recipe contains any of the selected tags)
+        if (tags != null && tags.Any())
+        {
+            var lowerTags = tags.Select(t => t.ToLower().Trim()).ToList();
+            query = query.Where(r => !string.IsNullOrWhiteSpace(r.Tags) && 
+                lowerTags.Any(tag => 
+                    r.Tags.ToLower().Contains("," + tag + ",") ||
+                    r.Tags.ToLower().StartsWith(tag + ",") ||
+                    r.Tags.ToLower().EndsWith("," + tag) ||
+                    r.Tags.ToLower() == tag));
+        }
+
+        return await query
+            .Select(r => new Recipe
+            {
+                Id = r.Id,
+                Name = r.Name,
+                Instructions = r.Instructions,
+                CookingTime = r.CookingTime,
+                Servings = r.Servings,
+                Tags = r.Tags,
+                Notes = r.Notes,
+                CreatedDate = r.CreatedDate,
+                ModifiedDate = r.ModifiedDate,
+                ImageContentType = r.ImageContentType,
+                RecipeIngredients = r.RecipeIngredients,
+                // Exclude ImageData for performance
+                ImageData = null
+            })
+            .OrderByDescending(r => r.ModifiedDate)
+            .ToListAsync();
+    }
+
+    public async Task<List<string>> GetAllTagsAsync()
+    {
+        var allTags = await _context.Recipes
+            .Where(r => !string.IsNullOrWhiteSpace(r.Tags))
+            .Select(r => r.Tags)
+            .ToListAsync();
+
+        var uniqueTags = allTags
+            .SelectMany(t => t.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            .Select(t => t.Trim())
+            .Where(t => !string.IsNullOrWhiteSpace(t))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(t => t)
+            .ToList();
+
+        return uniqueTags;
+    }
+
     private async Task ProcessIngredientsAsync(Recipe recipe, List<IngredientEntry> ingredientEntries)
     {
         foreach (var entry in ingredientEntries)

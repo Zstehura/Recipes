@@ -12,12 +12,80 @@
             <input type="text" class="form-control" placeholder="Search recipes..." @bind="searchTerm" @bind:event="oninput" @bind:after="LoadRecipes" />
         </div>
         <div class="col-12 col-md-6 text-md-end">
-            <a href="/recipe/new" class="btn btn-primary w-100 w-md-auto">
-                <span class="bi bi-plus-circle"></span> Add New Recipe
-            </a>
+            <div class="d-flex gap-2 justify-content-md-end">
+                <button class="btn btn-outline-secondary w-100 w-md-auto" @onclick="ToggleFilters" type="button">
+                    <span class="bi bi-funnel"></span> @(showFilters ? "Hide" : "Show") Filters
+                </button>
+                <a href="/recipe/new" class="btn btn-primary w-100 w-md-auto">
+                    <span class="bi bi-plus-circle"></span> Add New Recipe
+                </a>
+            </div>
         </div>
     </div>
 </div>
+
+@if (showFilters)
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5 class="card-title mb-3">Filter Recipes</h5>
+            <div class="row g-3">
+                <div class="col-12 col-md-6">
+                    <label class="form-label">Cook Time (minutes)</label>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <input type="number" class="form-control" placeholder="Min" min="1" @bind="minCookTime" @bind:event="onchange" @bind:after="LoadRecipes" />
+                        </div>
+                        <div class="col-6">
+                            <input type="number" class="form-control" placeholder="Max" min="1" @bind="maxCookTime" @bind:event="onchange" @bind:after="LoadRecipes" />
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label class="form-label">Servings</label>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <input type="number" class="form-control" placeholder="Min" min="1" @bind="minServings" @bind:event="onchange" @bind:after="LoadRecipes" />
+                        </div>
+                        <div class="col-6">
+                            <input type="number" class="form-control" placeholder="Max" min="1" @bind="maxServings" @bind:event="onchange" @bind:after="LoadRecipes" />
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Tags</label>
+                    @if (availableTags == null)
+                    {
+                        <p class="text-muted small">Loading tags...</p>
+                    }
+                    else if (!availableTags.Any())
+                    {
+                        <p class="text-muted small">No tags available</p>
+                    }
+                    else
+                    {
+                        <div class="d-flex flex-wrap gap-2">
+                            @foreach (var tag in availableTags)
+                            {
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="tag-@tag" checked="@selectedTags.Contains(tag)" @onchange="@((e) => ToggleTag(tag, e.Value))" />
+                                    <label class="form-check-label" for="tag-@tag">
+                                        @tag
+                                    </label>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+                <div class="col-12">
+                    <button class="btn btn-outline-danger btn-sm" @onclick="ClearFilters">
+                        <span class="bi bi-x-circle"></span> Clear All Filters
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 @if (recipes == null)
 {
@@ -77,23 +145,80 @@ else
 @code {
     private List<Recipe>? recipes;
     private string searchTerm = string.Empty;
+    private bool showFilters = false;
+    private int? minCookTime;
+    private int? maxCookTime;
+    private int? minServings;
+    private int? maxServings;
+    private List<string> availableTags = new();
+    private HashSet<string> selectedTags = new();
 
     protected override async Task OnInitializedAsync()
     {
         await LoadRecipes();
+        await LoadAvailableTags();
     }
 
     private async Task LoadRecipes()
     {
-        if (string.IsNullOrWhiteSpace(searchTerm))
+        var hasFilters = minCookTime.HasValue || maxCookTime.HasValue || 
+                        minServings.HasValue || maxServings.HasValue || 
+                        selectedTags.Any() || !string.IsNullOrWhiteSpace(searchTerm);
+
+        if (!hasFilters)
         {
             recipes = await RecipeService.GetAllRecipesAsync();
         }
         else
         {
-            recipes = await RecipeService.SearchRecipesAsync(searchTerm);
+            recipes = await RecipeService.FilterRecipesAsync(
+                searchTerm: string.IsNullOrWhiteSpace(searchTerm) ? null : searchTerm,
+                minCookTime: minCookTime,
+                maxCookTime: maxCookTime,
+                tags: selectedTags.Any() ? selectedTags.ToList() : null,
+                minServings: minServings,
+                maxServings: maxServings
+            );
         }
         StateHasChanged();
+    }
+
+    private async Task LoadAvailableTags()
+    {
+        availableTags = await RecipeService.GetAllTagsAsync();
+        StateHasChanged();
+    }
+
+    private void ToggleFilters()
+    {
+        showFilters = !showFilters;
+    }
+
+    private async Task ToggleTag(string tag, object? isChecked)
+    {
+        if (isChecked is bool checkedValue)
+        {
+            if (checkedValue)
+            {
+                selectedTags.Add(tag);
+            }
+            else
+            {
+                selectedTags.Remove(tag);
+            }
+            await LoadRecipes();
+        }
+    }
+
+    private async Task ClearFilters()
+    {
+        searchTerm = string.Empty;
+        minCookTime = null;
+        maxCookTime = null;
+        minServings = null;
+        maxServings = null;
+        selectedTags.Clear();
+        await LoadRecipes();
     }
 
     private async Task DeleteRecipe(int id)
@@ -101,6 +226,7 @@ else
         if (await RecipeService.DeleteRecipeAsync(id))
         {
             await LoadRecipes();
+            await LoadAvailableTags(); // Reload tags in case tags changed
         }
     }
 }
