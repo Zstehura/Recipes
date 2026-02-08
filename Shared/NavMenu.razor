@@ -12,6 +12,11 @@
             </button>
         </div>
         <div class="nav-item px-3">
+            <button class="nav-button @(IsActiveRoute("/search-by-ingredients") ? "active" : "")" @onclick="@(() => NavigateTo("/search-by-ingredients"))">
+                <span class="bi bi-search" aria-hidden="true"></span> Search by Ingredients
+            </button>
+        </div>
+        <div class="nav-item px-3">
             <button class="nav-button @(IsActiveRoute("/recipe/new") ? "active" : "")" @onclick="@(() => NavigateTo("/recipe/new"))">
                 <span class="bi bi-plus-circle" aria-hidden="true"></span> New Recipe
             </button>

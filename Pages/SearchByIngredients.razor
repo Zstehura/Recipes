@@ -1,0 +1,423 @@
+@page "/search-by-ingredients"
+@using RecipesApp.Models
+@using RecipesApp.Services
+@inject RecipeService RecipeService
+@inject IngredientService IngredientService
+
+<PageTitle>Search by Ingredients</PageTitle>
+
+<div class="mb-3">
+    <h2>Search Recipes by Available Ingredients</h2>
+    <p class="text-muted">Select the ingredients you have available to find matching recipes.</p>
+</div>
+
+<div class="mb-3">
+    <div class="row g-2">
+        <div class="col-12 col-md-6">
+            <input type="text" class="form-control" placeholder="Search recipes..." @bind="searchTerm" @bind:event="oninput" @bind:after="SearchRecipes" />
+        </div>
+        <div class="col-12 col-md-6 text-md-end">
+            <div class="d-flex gap-2 justify-content-md-end">
+                <button class="btn btn-outline-secondary w-100 w-md-auto" @onclick="ToggleFilters" type="button">
+                    <span class="bi bi-funnel"></span> @(showFilters ? "Hide" : "Show") Filters
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (showFilters)
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5 class="card-title mb-3">Filter Recipes</h5>
+            <div class="row g-3">
+                <div class="col-12 col-md-6">
+                    <label class="form-label">Cook Time (minutes)</label>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <input type="number" class="form-control" placeholder="Min" min="1" @bind="minCookTime" @bind:event="onchange" @bind:after="SearchRecipes" />
+                        </div>
+                        <div class="col-6">
+                            <input type="number" class="form-control" placeholder="Max" min="1" @bind="maxCookTime" @bind:event="onchange" @bind:after="SearchRecipes" />
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label class="form-label">Servings</label>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <input type="number" class="form-control" placeholder="Min" min="1" @bind="minServings" @bind:event="onchange" @bind:after="SearchRecipes" />
+                        </div>
+                        <div class="col-6">
+                            <input type="number" class="form-control" placeholder="Max" min="1" @bind="maxServings" @bind:event="onchange" @bind:after="SearchRecipes" />
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Tags</label>
+                    @if (availableTags == null)
+                    {
+                        <p class="text-muted small">Loading tags...</p>
+                    }
+                    else if (!availableTags.Any())
+                    {
+                        <p class="text-muted small">No tags available</p>
+                    }
+                    else
+                    {
+                        <div class="d-flex flex-wrap gap-2">
+                            @foreach (var tag in availableTags)
+                            {
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="tag-@tag" checked="@selectedTags.Contains(tag)" @onchange="@((e) => ToggleTag(tag, e.Value))" />
+                                    <label class="form-check-label" for="tag-@tag">
+                                        @tag
+                                    </label>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+                <div class="col-12">
+                    <button class="btn btn-outline-danger btn-sm" @onclick="ClearFilters">
+                        <span class="bi bi-x-circle"></span> Clear All Filters
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="row">
+    <div class="col-12 col-md-4 mb-3">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Available Ingredients</h5>
+            </div>
+            <div class="card-body">
+                @if (ingredients == null)
+                {
+                    <p><em>Loading ingredients...</em></p>
+                }
+                else if (!ingredients.Any())
+                {
+                    <p class="text-muted">No ingredients available. <a href="/ingredients">Add ingredients first.</a></p>
+                }
+                else
+                {
+                    <div class="mb-2">
+                        <button class="btn btn-sm btn-outline-primary" @onclick="SelectAll">Select All</button>
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="DeselectAll">Deselect All</button>
+                    </div>
+                    <div style="max-height: 500px; overflow-y: auto;">
+                        @foreach (var ingredient in ingredients)
+                        {
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" 
+                                       id="ingredient-@ingredient.Id" 
+                                       checked="@selectedIngredientIds.Contains(ingredient.Id)" 
+                                       @onchange="@((e) => ToggleIngredient(ingredient.Id, e.Value))" />
+                                <label class="form-check-label" for="ingredient-@ingredient.Id">
+                                    @ingredient.Name
+                                </label>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-8">
+        @if (recipes == null)
+        {
+            <p><em>Select ingredients to search for recipes...</em></p>
+        }
+        else if (!recipes.Any())
+        {
+            <div class="alert alert-info">
+                <p>No recipes found with all selected ingredients. Try selecting fewer ingredients or different combinations.</p>
+            </div>
+        }
+        else
+        {
+            <div class="mb-2">
+                <p class="text-muted">Found <strong>@recipes.Count</strong> recipe@(recipes.Count == 1 ? "" : "s") matching your selected ingredients.</p>
+            </div>
+            <div class="row g-3">
+                @foreach (var recipe in recipes)
+                {
+                    <div class="col-12 col-sm-6 col-lg-4">
+                        <div class="card h-100 recipe-card">
+                            @if (recipe.ImageContentType != null)
+                            {
+                                <img src="/api/recipe/@recipe.Id/image" alt="@recipe.Name" class="card-img-top" style="height: 200px; object-fit: cover;" />
+                            }
+                            <div class="card-body">
+                                <h5 class="card-title">@recipe.Name</h5>
+                                <p class="card-text">
+                                    <small class="text-muted">
+                                        <span class="bi bi-clock"></span> @recipe.CookingTime min
+                                        <span class="ms-2 bi bi-people"></span> @recipe.Servings servings
+                                    </small>
+                                </p>
+                                @if (!string.IsNullOrEmpty(recipe.Tags))
+                                {
+                                    <div class="mb-2">
+                                        @foreach (var tag in recipe.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                                        {
+                                            <span class="badge bg-secondary me-1">@tag</span>
+                                        }
+                                    </div>
+                                }
+                                <p class="card-text text-muted small">
+                                    @(recipe.Instructions.Length > 100 ? recipe.Instructions.Substring(0, 100) + "..." : recipe.Instructions)
+                                </p>
+                            </div>
+                            <div class="card-footer bg-transparent p-2">
+                                <div class="d-grid">
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => ViewRecipe(recipe.Id)">View</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@* Recipe Detail Modal *@
+@if (showRecipeModal && selectedRecipe != null)
+{
+    <div class="modal show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@selectedRecipe.Name</h5>
+                    <button type="button" class="btn-close" @onclick="CloseRecipeModal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    @if (selectedRecipe.ImageContentType != null)
+                    {
+                        <img src="/api/recipe/@selectedRecipe.Id/image" alt="@selectedRecipe.Name" class="img-fluid mb-3" style="max-height: 300px; object-fit: cover; width: 100%;" />
+                    }
+                    <div class="row mb-3 g-2">
+                        <div class="col-12 col-md-6">
+                            <p class="mb-1">
+                                <strong><span class="bi bi-clock"></span> Cooking Time:</strong> @selectedRecipe.CookingTime minutes
+                            </p>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <p class="mb-1">
+                                <strong><span class="bi bi-people"></span> Servings:</strong> @selectedRecipe.Servings
+                            </p>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(selectedRecipe.Tags))
+                    {
+                        <div class="mb-3">
+                            <strong>Tags:</strong>
+                            @foreach (var tag in selectedRecipe.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                            {
+                                <span class="badge bg-secondary me-1">@tag</span>
+                            }
+                        </div>
+                    }
+
+                    <div class="mb-4">
+                        <h5>Ingredients</h5>
+                        <div class="ingredients-list">
+                            @foreach (var recipeIngredient in selectedRecipe.RecipeIngredients)
+                            {
+                                <div class="ingredient-item">
+                                    @if (recipeIngredient.Quantity.HasValue && !string.IsNullOrWhiteSpace(recipeIngredient.Unit))
+                                    {
+                                        // Convert from base unit to display unit
+                                        var (displayQuantity, displayUnit) = UnitConversionService.ConvertFromBaseUnit(
+                                            recipeIngredient.Quantity.Value, 
+                                            recipeIngredient.Unit);
+                                        <strong>@displayQuantity.ToString("0.##") @UnitConversionService.GetUnitDisplayName(displayUnit)</strong> @recipeIngredient.Ingredient.Name
+                                    }
+                                    else
+                                    {
+                                        @recipeIngredient.Ingredient.Name
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <h5>Instructions</h5>
+                        <div class="instructions-text">
+                            @foreach (var instruction in selectedRecipe.Instructions.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                            {
+                                <p>@instruction</p>
+                            }
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(selectedRecipe.Notes))
+                    {
+                        <div class="mb-3">
+                            <h5>Notes</h5>
+                            <div class="notes-text">
+                                @foreach (var note in selectedRecipe.Notes.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                                {
+                                    <p>@note</p>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    <div class="text-muted small mt-4">
+                        <p>Created: @selectedRecipe.CreatedDate.ToString("MMMM dd, yyyy")</p>
+                        <p>Last Modified: @selectedRecipe.ModifiedDate.ToString("MMMM dd, yyyy")</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseRecipeModal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Ingredient>? ingredients;
+    private List<Recipe>? recipes;
+    private HashSet<int> selectedIngredientIds = new();
+    private bool showRecipeModal = false;
+    private Recipe? selectedRecipe;
+    private string searchTerm = string.Empty;
+    private bool showFilters = false;
+    private int? minCookTime;
+    private int? maxCookTime;
+    private int? minServings;
+    private int? maxServings;
+    private List<string> availableTags = new();
+    private HashSet<string> selectedTags = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadIngredients();
+        await LoadAvailableTags();
+    }
+
+    private async Task LoadIngredients()
+    {
+        ingredients = await IngredientService.GetAllIngredientsAsync();
+        StateHasChanged();
+    }
+
+    private async Task LoadAvailableTags()
+    {
+        availableTags = await RecipeService.GetAllTagsAsync();
+        StateHasChanged();
+    }
+
+    private void ToggleFilters()
+    {
+        showFilters = !showFilters;
+    }
+
+    private async Task ToggleIngredient(int ingredientId, object? isChecked)
+    {
+        if (isChecked is bool checkedValue)
+        {
+            if (checkedValue)
+            {
+                selectedIngredientIds.Add(ingredientId);
+            }
+            else
+            {
+                selectedIngredientIds.Remove(ingredientId);
+            }
+            await SearchRecipes();
+        }
+    }
+
+    private async Task ToggleTag(string tag, object? isChecked)
+    {
+        if (isChecked is bool checkedValue)
+        {
+            if (checkedValue)
+            {
+                selectedTags.Add(tag);
+            }
+            else
+            {
+                selectedTags.Remove(tag);
+            }
+            await SearchRecipes();
+        }
+    }
+
+    private async Task SearchRecipes()
+    {
+        // Only search if ingredients are selected
+        if (selectedIngredientIds.Any())
+        {
+            recipes = await RecipeService.FilterRecipesByIngredientsWithFiltersAsync(
+                ingredientIds: selectedIngredientIds.ToList(),
+                searchTerm: string.IsNullOrWhiteSpace(searchTerm) ? null : searchTerm,
+                minCookTime: minCookTime,
+                maxCookTime: maxCookTime,
+                tags: selectedTags.Any() ? selectedTags.ToList() : null,
+                minServings: minServings,
+                maxServings: maxServings
+            );
+        }
+        else
+        {
+            recipes = null;
+        }
+        StateHasChanged();
+    }
+
+    private async Task ClearFilters()
+    {
+        searchTerm = string.Empty;
+        minCookTime = null;
+        maxCookTime = null;
+        minServings = null;
+        maxServings = null;
+        selectedTags.Clear();
+        await SearchRecipes();
+    }
+
+    private void SelectAll()
+    {
+        if (ingredients != null)
+        {
+            selectedIngredientIds = ingredients.Select(i => i.Id).ToHashSet();
+            _ = SearchRecipes();
+        }
+    }
+
+    private void DeselectAll()
+    {
+        selectedIngredientIds.Clear();
+        recipes = null;
+        StateHasChanged();
+    }
+
+    private async Task ViewRecipe(int recipeId)
+    {
+        selectedRecipe = await RecipeService.GetRecipeByIdAsync(recipeId);
+        if (selectedRecipe != null)
+        {
+            showRecipeModal = true;
+            StateHasChanged();
+        }
+    }
+
+    private void CloseRecipeModal()
+    {
+        showRecipeModal = false;
+        selectedRecipe = null;
+        StateHasChanged();
+    }
+}
