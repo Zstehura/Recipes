@@ -66,7 +66,7 @@ else
                                 var (displayQuantity, displayUnit) = UnitConversionService.ConvertFromBaseUnit(
                                     recipeIngredient.Quantity.Value, 
                                     recipeIngredient.Unit);
-                                <strong>@displayQuantity.ToString("0.##") @UnitConversionService.GetUnitDisplayName(displayUnit)</strong> @recipeIngredient.Ingredient.Name
+                                <strong>@displayQuantity.ToString("0.##") @UnitConversionService.GetUnitDisplayName(displayUnit) </strong> @recipeIngredient.Ingredient.Name
                             }
                             else
                             {

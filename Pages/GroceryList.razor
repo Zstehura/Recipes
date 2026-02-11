@@ -1,0 +1,266 @@
+@page "/grocery-list"
+@using RecipesApp.Models
+@using RecipesApp.Services
+@inject RecipeService RecipeService
+@inject GroceryListService GroceryListService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Grocery List</PageTitle>
+
+<div class="mb-4">
+    <h1 class="mb-2">Grocery List Generator</h1>
+    <p class="text-muted">Select recipes and specify quantities to generate a combined grocery list.</p>
+</div>
+
+<div class="row g-3">
+    <!-- Left Column: Recipe Selection -->
+    <div class="col-12 col-md-8">
+        @if (recipes == null)
+        {
+            <p><em>Loading recipes...</em></p>
+        }
+        else if (!recipes.Any())
+        {
+            <div class="alert alert-info">
+                <p>No recipes available. <a href="/recipe/new">Create your first recipe!</a></p>
+            </div>
+        }
+        else
+        {
+            <div class="row g-3">
+                @foreach (var recipe in recipes)
+                {
+                    var isSelected = selectedRecipeMultipliers.ContainsKey(recipe.Id);
+                    <div class="col-12 col-sm-6 col-lg-6">
+                        <div class="card h-100 @(isSelected ? "border-primary" : "")" style="@(isSelected ? "box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);" : "")">
+                            <div class="card-body">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="recipe-@recipe.Id"
+                                           checked="@isSelected"
+                                           @onchange="@((e) => ToggleRecipeSelection(recipe.Id, e.Value))" />
+                                    <label class="form-check-label fw-bold" for="recipe-@recipe.Id">
+                                        @recipe.Name
+                                    </label>
+                                </div>
+
+                                <p class="card-text mb-2">
+                                    <small class="text-muted">
+                                        <span class="bi bi-clock"></span> @recipe.CookingTime min
+                                        <span class="ms-2 bi bi-people"></span> @recipe.Servings servings
+                                    </small>
+                                </p>
+
+                                @if (!string.IsNullOrEmpty(recipe.Tags))
+                                {
+                                    <div class="mb-2">
+                                        @foreach (var tag in recipe.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                                        {
+                                            <span class="badge bg-secondary me-1">@tag</span>
+                                        }
+                                    </div>
+                                }
+
+                                @if (recipe.RecipeIngredients != null && recipe.RecipeIngredients.Any())
+                                {
+                                    <p class="card-text">
+                                        <small class="text-muted">
+                                            <span class="bi bi-basket"></span> @recipe.RecipeIngredients.Count ingredient@(recipe.RecipeIngredients.Count > 1 ? "s" : "")
+                                        </small>
+                                    </p>
+                                }
+
+                                @if (isSelected)
+                                {
+                                    <div class="mt-3">
+                                        <label class="form-label small text-muted">Quantity (how many times to include this recipe)</label>
+                                        <input type="number" class="form-control form-control-sm" min="1" max="10"
+                                               value="@selectedRecipeMultipliers[recipe.Id]"
+                                               @onchange="@((e) => UpdateMultiplier(recipe.Id, e.Value))" />
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <!-- Right Column: Summary and Actions -->
+    <div class="col-12 col-md-4">
+        <div class="card sticky-top" style="top: 1rem;">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Summary</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-3">
+                    <strong>@selectedRecipeMultipliers.Count</strong> recipe@(selectedRecipeMultipliers.Count != 1 ? "s" : "") selected
+                </p>
+
+                @if (selectedRecipeMultipliers.Any())
+                {
+                    <div class="mb-3">
+                        <small class="text-muted">Selected recipes:</small>
+                        <ul class="list-unstyled mt-2">
+                            @foreach (var item in selectedRecipeMultipliers)
+                            {
+                                var recipe = recipes?.FirstOrDefault(r => r.Id == item.Key);
+                                if (recipe != null)
+                                {
+                                    <li class="mb-1">
+                                        <small>
+                                            @item.Value x @recipe.Name
+                                        </small>
+                                    </li>
+                                }
+                            }
+                        </ul>
+                    </div>
+                }
+
+                <div class="d-grid gap-2">
+                    <button class="btn btn-primary"
+                            @onclick="GenerateGroceryListAsync"
+                            disabled="@(!selectedRecipeMultipliers.Any() || isGenerating)">
+                        @if (isGenerating)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        }
+                        else
+                        {
+                            <span class="bi bi-cart-check me-2"></span>
+                        }
+                        Generate List
+                    </button>
+
+                    @if (selectedRecipeMultipliers.Any())
+                    {
+                        <button class="btn btn-outline-secondary" @onclick="ClearSelection">
+                            <span class="bi bi-x-circle"></span> Clear Selection
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(generatedGroceryList))
+{
+    <div class="row g-3 mt-3">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Your Grocery List</h5>
+                    <button class="btn btn-sm btn-light" @onclick="CopyToClipboardAsync">
+                        <span class="bi bi-clipboard"></span> Copy
+                    </button>
+                </div>
+                <div class="card-body">
+                    <textarea class="form-control font-monospace" rows="20" readonly style="resize: vertical;">@generatedGroceryList</textarea>
+                    @if (!string.IsNullOrEmpty(copyMessage))
+                    {
+                        <div class="alert alert-success mt-2 mb-0">
+                            @copyMessage
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Recipe>? recipes;
+    private Dictionary<int, int> selectedRecipeMultipliers = new();
+    private string? generatedGroceryList;
+    private bool isGenerating = false;
+    private string? copyMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRecipes();
+    }
+
+    private async Task LoadRecipes()
+    {
+        recipes = await RecipeService.GetAllRecipesAsync();
+        StateHasChanged();
+    }
+
+    private void ToggleRecipeSelection(int recipeId, object? isChecked)
+    {
+        if (isChecked is bool checkedValue)
+        {
+            if (checkedValue)
+            {
+                // Add with default multiplier of 1
+                selectedRecipeMultipliers[recipeId] = 1;
+            }
+            else
+            {
+                // Remove from selection
+                selectedRecipeMultipliers.Remove(recipeId);
+            }
+            StateHasChanged();
+        }
+    }
+
+    private void UpdateMultiplier(int recipeId, object? value)
+    {
+        if (value is string strValue && int.TryParse(strValue, out var multiplier))
+        {
+            if (multiplier >= 1 && multiplier <= 10)
+            {
+                selectedRecipeMultipliers[recipeId] = multiplier;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task GenerateGroceryListAsync()
+    {
+        isGenerating = true;
+        copyMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            generatedGroceryList = await GroceryListService.GenerateGroceryListAsync(selectedRecipeMultipliers);
+        }
+        finally
+        {
+            isGenerating = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ClearSelection()
+    {
+        selectedRecipeMultipliers.Clear();
+        generatedGroceryList = null;
+        copyMessage = null;
+        StateHasChanged();
+    }
+
+    private async Task CopyToClipboardAsync()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", generatedGroceryList);
+            copyMessage = "Copied to clipboard!";
+            StateHasChanged();
+
+            // Clear message after 3 seconds
+            await Task.Delay(3000);
+            copyMessage = null;
+            StateHasChanged();
+        }
+        catch
+        {
+            copyMessage = "Failed to copy. Please select and copy manually.";
+            StateHasChanged();
+        }
+    }
+}

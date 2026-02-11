@@ -17,6 +17,11 @@
             </button>
         </div>
         <div class="nav-item px-3">
+            <button class="nav-button @(IsActiveRoute("/grocery-list") ? "active" : "")" @onclick="@(() => NavigateTo("/grocery-list"))">
+                <span class="bi bi-cart" aria-hidden="true"></span> Grocery List
+            </button>
+        </div>
+        <div class="nav-item px-3">
             <button class="nav-button @(IsActiveRoute("/recipe/new") ? "active" : "")" @onclick="@(() => NavigateTo("/recipe/new"))">
                 <span class="bi bi-plus-circle" aria-hidden="true"></span> New Recipe
             </button>
@@ -24,6 +29,11 @@
         <div class="nav-item px-3">
             <button class="nav-button @(IsActiveRoute("/ingredients") ? "active" : "")" @onclick="@(() => NavigateTo("/ingredients"))">
                 <span class="bi bi-list-check" aria-hidden="true"></span> Ingredients
+            </button>
+        </div>
+        <div class="nav-item px-3">
+            <button class="nav-button @(IsActiveRoute("/import-export") ? "active" : "")" @onclick="@(() => NavigateTo("/import-export"))">
+                <span class="bi bi-arrow-left-right" aria-hidden="true"></span> Import/Export
             </button>
         </div>
     </nav>

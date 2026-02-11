@@ -1,0 +1,495 @@
+@page "/import-export"
+@using RecipesApp.Models
+@using RecipesApp.Services
+@using Microsoft.AspNetCore.Components.Forms
+@inject RecipeService RecipeService
+@inject IngredientService IngredientService
+@inject RecipeImportExportService ImportExportService
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Import/Export Recipes</PageTitle>
+
+<h1>Import/Export Recipes</h1>
+
+<!-- Export Section -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><span class="bi bi-download"></span> Export Recipes</h5>
+    </div>
+    <div class="card-body">
+        <p>Export all your recipes to a text file that can be edited and re-imported later.</p>
+        <button class="btn btn-primary" @onclick="ExportRecipes" disabled="@isExporting">
+            <span class="bi bi-download"></span> @(isExporting ? "Exporting..." : "Export All Recipes")
+        </button>
+        @if (!string.IsNullOrEmpty(exportMessage))
+        {
+            <div class="alert alert-info mt-3 mb-0">@exportMessage</div>
+        }
+    </div>
+</div>
+
+<!-- Import Section -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><span class="bi bi-upload"></span> Import Recipes</h5>
+    </div>
+    <div class="card-body">
+        <p>Upload a text file or paste recipe text directly. See the format guide below for details.</p>
+
+        <!-- Tab Navigation -->
+        <ul class="nav nav-tabs mb-3">
+            <li class="nav-item">
+                <button class="nav-link @(importMode == "text" ? "active" : "")" @onclick="() => SetImportMode(2)">
+                    <span class="bi bi-clipboard"></span> Paste Text
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link @(importMode == "file" ? "active" : "")" @onclick="() => SetImportMode(1)">
+                    <span class="bi bi-file-earmark-arrow-up"></span> Upload File
+                </button>
+            </li>
+        </ul>
+
+        <!-- File Upload Tab -->
+        @if (importMode == "file")
+        {
+            <div class="mb-3">
+                <InputFile OnChange="HandleFileSelected" class="form-control" accept=".txt" />
+            </div>
+        }
+
+        <!-- Text Paste Tab -->
+        @if (importMode == "text")
+        {
+            <div class="mb-3">
+                <label class="form-label">Paste your recipe text here:</label>
+                <textarea class="form-control font-monospace" rows="10" @bind="pastedText" placeholder="See below for format details"></textarea>
+            </div>
+            <button class="btn btn-primary mb-3" @onclick="ParsePastedText" disabled="@(isProcessing || string.IsNullOrWhiteSpace(pastedText))">
+                <span class="bi bi-file-text"></span> Parse Text
+            </button>
+        }
+
+        @if (isProcessing)
+        {
+            <div class="alert alert-info">
+                <span class="spinner-border spinner-border-sm me-2"></span>
+                Processing file...
+            </div>
+        }
+
+        @if (importErrors.Any())
+        {
+            <div class="alert alert-warning">
+                <h6 class="alert-heading"><span class="bi bi-exclamation-triangle"></span> Import Warnings</h6>
+                <ul class="mb-0">
+                    @foreach (var error in importErrors)
+                    {
+                        <li>@error</li>
+                    }
+                </ul>
+            </div>
+        }
+
+        @if (parsedRecipes.Any())
+        {
+            <div class="alert alert-success">
+                <span class="bi bi-check-circle"></span> Found @parsedRecipes.Count recipe(s) ready to import
+            </div>
+
+            <div class="table-responsive mb-3">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Cooking Time</th>
+                            <th>Servings</th>
+                            <th>Ingredients</th>
+                            <th>Tags</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var recipe in parsedRecipes)
+                        {
+                            <tr>
+                                <td>@recipe.Name</td>
+                                <td>@recipe.CookingTime min</td>
+                                <td>@recipe.Servings</td>
+                                <td>@recipe.RecipeIngredients.Count</td>
+                                <td>@(string.IsNullOrWhiteSpace(recipe.Tags) ? "-" : recipe.Tags)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <button class="btn btn-success" @onclick="ConfirmImport" disabled="@isImporting">
+                <span class="bi bi-check-circle"></span> @(isImporting ? "Importing..." : "Confirm Import")
+            </button>
+            <button class="btn btn-secondary ms-2" @onclick="CancelImport" disabled="@isImporting">
+                Cancel
+            </button>
+        }
+
+        @if (!string.IsNullOrEmpty(importSuccessMessage))
+        {
+            <div class="alert alert-success mt-3 mb-0">
+                <span class="bi bi-check-circle"></span> @importSuccessMessage
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Format Documentation Section -->
+<div class="card">
+    <div class="card-header">
+        <button class="btn btn-link text-decoration-none w-100 text-start p-0" @onclick="ToggleFormatHelp">
+            <h5 class="mb-0">
+                <span class="bi bi-@(showFormatHelp ? "chevron-down" : "chevron-right")"></span>
+                Format Guide
+            </h5>
+        </button>
+    </div>
+    @if (showFormatHelp)
+    {
+        <div class="card-body">
+            <h6>Recipe Format Structure</h6>
+            <p>Each recipe must follow this structure with specific delimiters:</p>
+
+            <pre class="bg-light p-3 border rounded"><code>===== RECIPE =====
+Name: Chocolate Chip Cookies
+Cooking Time: 25 minutes
+Servings: 24
+Tags: Dessert,Baking,Easy
+
+===== INGREDIENTS =====
+250g all-purpose flour
+200g butter
+150g brown sugar
+100g chocolate chips
+2pieces eggs
+1tsp vanilla extract
+1tsp baking soda
+
+===== INSTRUCTIONS =====
+1. Preheat oven to 350°F (175°C).
+2. Mix butter and sugar until creamy.
+3. Add eggs and vanilla, mix well.
+4. In a separate bowl, combine flour and baking soda.
+5. Gradually add dry ingredients to wet ingredients.
+6. Fold in chocolate chips.
+7. Drop spoonfuls onto baking sheet.
+8. Bake for 10-12 minutes until golden brown.
+
+===== NOTES =====
+Best served warm. Store in airtight container for up to 5 days.
+
+===== END RECIPE =====</code></pre>
+
+            <h6 class="mt-4">Required Fields</h6>
+            <ul>
+                <li><strong>Name:</strong> Recipe name (max 200 characters)</li>
+                <li><strong>Cooking Time:</strong> Number of minutes (accepts "30", "30 min", or "30 minutes")</li>
+                <li><strong>Servings:</strong> Number of servings (must be at least 1)</li>
+                <li><strong>Instructions:</strong> Step-by-step cooking instructions</li>
+            </ul>
+
+            <h6 class="mt-4">Optional Fields</h6>
+            <ul>
+                <li><strong>Tags:</strong> Comma-separated list of tags (e.g., "Italian,Vegetarian,Quick")</li>
+                <li><strong>Notes:</strong> Additional notes about the recipe</li>
+            </ul>
+
+            <h6 class="mt-4">Ingredient Format</h6>
+            <p>Format: <code>quantity unit name</code> or <code>quantity name</code> (unit defaults to pieces)</p>
+            <p>Examples:</p>
+            <ul>
+                <li><code>250g flour</code> - Space between quantity and unit is optional</li>
+                <li><code>2 cups milk</code> - Space between quantity and unit</li>
+                <li><code>3pieces eggs</code> - No space works too</li>
+                <li><code>2 eggs</code> - No unit specified, defaults to pieces</li>
+                <li><code>3/4 cup sugar</code> - Fractions are converted to decimals (0.75)</li>
+                <li><code>1 1/2 tsp vanilla</code> - Mixed fractions work too (1.5)</li>
+                <li><code>salt to taste</code> - If format doesn't match, treats entire line as ingredient name</li>
+            </ul>
+            <p class="text-muted small"><strong>Note:</strong> Ingredient names are case-insensitive. "Flour", "flour", and "FLOUR" will all match the same ingredient.</p>
+
+            <h6 class="mt-4">Supported Units</h6>
+            <div class="row">
+                <div class="col-md-4">
+                    <strong>Weight:</strong>
+                    <ul class="small">
+                        <li>g, gram, grams</li>
+                        <li>kg, kilogram, kilograms</li>
+                        <li>oz, ounce, ounces</li>
+                        <li>lb, lbs, pound, pounds</li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <strong>Volume:</strong>
+                    <ul class="small">
+                        <li>ml, milliliter, milliliters</li>
+                        <li>l, liter, liters</li>
+                        <li>cup, cups</li>
+                        <li>tbsp, tablespoon, tablespoons</li>
+                        <li>tsp, teaspoon, teaspoons</li>
+                        <li>fl oz, floz, fluidounce</li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <strong>Count:</strong>
+                    <ul class="small">
+                        <li>piece, pieces</li>
+                        <li>pcs, pc</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h6 class="mt-4">Multiple Recipes</h6>
+            <p>You can include multiple recipes in a single file. Just repeat the structure above for each recipe, making sure each one ends with <code>===== END RECIPE =====</code></p>
+
+            <h6 class="mt-4">Tips for Writing Recipes</h6>
+            <ul>
+                <li>The format is flexible - reasonable spacing and formatting variations are handled automatically</li>
+                <li>If an ingredient line doesn't match the quantity+unit+name format, it will be imported as just a name</li>
+                <li>Missing optional fields (Tags, Notes) are fine - they'll just be left empty</li>
+                <li>If you're unsure, export an existing recipe to see the exact format</li>
+            </ul>
+        </div>
+    }
+</div>
+
+@code {
+    private bool isExporting = false;
+    private bool isProcessing = false;
+    private bool isImporting = false;
+    private bool showFormatHelp = false;
+    private string exportMessage = "";
+    private string importSuccessMessage = "";
+    private string importMode = "text";
+    private string pastedText = "";
+
+    private List<Recipe> parsedRecipes = new();
+    private List<string> importErrors = new();
+
+    private void SetImportMode(int mode)
+    {
+        importMode = mode == 1 ? "file" : "text";
+        // Clear any previous import state when switching modes
+        parsedRecipes.Clear();
+        importErrors.Clear();
+        importSuccessMessage = "";
+    }
+
+    private void ToggleFormatHelp()
+    {
+        showFormatHelp = !showFormatHelp;
+    }
+
+    private void ParsePastedText()
+    {
+        isProcessing = true;
+        parsedRecipes.Clear();
+        importErrors.Clear();
+        importSuccessMessage = "";
+        StateHasChanged();
+
+        try
+        {
+            var (recipes, errors) = ImportExportService.ParseRecipeText(pastedText);
+
+            parsedRecipes = recipes;
+            importErrors = errors;
+        }
+        catch (Exception ex)
+        {
+            importErrors.Add($"Error parsing text: {ex.Message}");
+        }
+        finally
+        {
+            isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ExportRecipes()
+    {
+        isExporting = true;
+        exportMessage = "";
+        StateHasChanged();
+
+        try
+        {
+            var recipes = await RecipeService.GetAllRecipesAsync();
+
+            if (!recipes.Any())
+            {
+                exportMessage = "No recipes to export.";
+                return;
+            }
+
+            var exportText = ImportExportService.ExportRecipesToText(recipes.ToList());
+            var filename = $"recipes_export_{DateTime.Now:yyyyMMdd_HHmmss}.txt";
+
+            await JSRuntime.InvokeVoidAsync("downloadFile", filename, exportText);
+
+            exportMessage = $"Successfully exported {recipes.Count} recipe(s) to {filename}";
+        }
+        catch (Exception ex)
+        {
+            exportMessage = $"Error exporting recipes: {ex.Message}";
+        }
+        finally
+        {
+            isExporting = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        isProcessing = true;
+        parsedRecipes.Clear();
+        importErrors.Clear();
+        importSuccessMessage = "";
+        StateHasChanged();
+
+        try
+        {
+            var file = e.File;
+            if (file.Size > 10 * 1024 * 1024) // 10MB limit
+            {
+                importErrors.Add("File size exceeds 10MB limit.");
+                return;
+            }
+
+            using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            using var reader = new StreamReader(stream);
+            var text = await reader.ReadToEndAsync();
+
+            var (recipes, errors) = ImportExportService.ParseRecipeText(text);
+
+            parsedRecipes = recipes;
+            importErrors = errors;
+        }
+        catch (Exception ex)
+        {
+            importErrors.Add($"Error reading file: {ex.Message}");
+        }
+        finally
+        {
+            isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ConfirmImport()
+    {
+        isImporting = true;
+        importSuccessMessage = "";
+        StateHasChanged();
+
+        int successCount = 0;
+        var newErrors = new List<string>();
+
+        try
+        {
+            foreach (var recipe in parsedRecipes)
+            {
+                try
+                {
+                    // Convert RecipeIngredient objects to IngredientEntry objects
+                    var ingredientEntries = new List<IngredientEntry>();
+
+                    foreach (var ri in recipe.RecipeIngredients)
+                    {
+                        var ingredientName = ri.Ingredient.Name;
+
+                        // Check if ingredient exists, create if it doesn't
+                        var existingIngredient = await IngredientService.GetIngredientByNameAsync(ingredientName);
+
+                        // Determine the measurement unit from the stored base unit
+                        var unit = DetermineUnitFromBaseUnit(ri.Unit);
+
+                        var entry = new IngredientEntry
+                        {
+                            Name = ingredientName,
+                            Quantity = ri.Quantity,
+                            Unit = unit
+                        };
+
+                        ingredientEntries.Add(entry);
+                    }
+
+                    // Clear the RecipeIngredients collection to avoid duplicate processing
+                    recipe.RecipeIngredients = new List<RecipeIngredient>();
+
+                    await RecipeService.AddRecipeAsync(recipe, ingredientEntries);
+                    successCount++;
+                }
+                catch (Exception ex)
+                {
+                    newErrors.Add($"Failed to import '{recipe.Name}': {ex.Message}");
+                }
+            }
+
+            if (successCount > 0)
+            {
+                importSuccessMessage = $"Successfully imported {successCount} recipe(s)!";
+
+                // Clear the parsed recipes after successful import
+                parsedRecipes.Clear();
+            }
+
+            if (newErrors.Any())
+            {
+                importErrors.AddRange(newErrors);
+            }
+            else if (successCount > 0)
+            {
+                importErrors.Clear();
+            }
+        }
+        catch (Exception ex)
+        {
+            importErrors.Add($"Error during import: {ex.Message}");
+        }
+        finally
+        {
+            isImporting = false;
+            StateHasChanged();
+        }
+    }
+
+    private void CancelImport()
+    {
+        parsedRecipes.Clear();
+        importErrors.Clear();
+        importSuccessMessage = "";
+    }
+
+    private MeasurementUnit DetermineUnitFromBaseUnit(string? baseUnit)
+    {
+        // The parsed recipes have base units (g, ml, pieces)
+        // We need to convert them back to appropriate MeasurementUnit enum values
+        return baseUnit switch
+        {
+            "g" => MeasurementUnit.Grams,
+            "ml" => MeasurementUnit.Milliliters,
+            "pieces" => MeasurementUnit.Pieces,
+            _ => MeasurementUnit.Pieces
+        };
+    }
+}
+
+<script>
+    window.downloadFile = function(filename, text) {
+        const blob = new Blob([text], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+</script>

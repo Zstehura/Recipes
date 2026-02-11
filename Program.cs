@@ -27,6 +27,8 @@ builder.Services.AddDbContext<RecipeDbContext>(options =>
 // Add Services
 builder.Services.AddScoped<RecipeService>();
 builder.Services.AddScoped<IngredientService>();
+builder.Services.AddScoped<RecipeImportExportService>();
+builder.Services.AddScoped<GroceryListService>();
 
 var app = builder.Build();
 
