@@ -387,16 +387,17 @@ public class RecipeService
             if (string.IsNullOrWhiteSpace(entry.Name))
                 continue;
 
+            var normalizedName = IngredientService.NormalizeName(entry.Name);
+
             // Find or create ingredient
             var ingredient = await _context.Ingredients
-                .FirstOrDefaultAsync(i => i.Name.ToLower() == entry.Name.ToLower());
+                .FirstOrDefaultAsync(i => i.Name.ToLower() == normalizedName.ToLower());
 
             if (ingredient == null)
             {
-                // Use the unit from the entry as the default unit for the new ingredient
-                ingredient = new Ingredient 
-                { 
-                    Name = entry.Name,
+                ingredient = new Ingredient
+                {
+                    Name = normalizedName,
                     DefaultUnit = entry.Unit
                 };
                 _context.Ingredients.Add(ingredient);
@@ -409,19 +410,21 @@ public class RecipeService
             if (entry.Quantity.HasValue)
             {
                 var (convertedQuantity, convertedUnit) = UnitConversionService.ConvertToBaseUnit(
-                    entry.Quantity.Value, 
+                    entry.Quantity.Value,
                     entry.Unit);
                 baseQuantity = convertedQuantity;
                 baseUnit = convertedUnit;
             }
 
             // Add recipe ingredient relationship
+            var modifier = string.IsNullOrWhiteSpace(entry.Modifier) ? null : entry.Modifier.Trim();
             recipe.RecipeIngredients.Add(new RecipeIngredient
             {
                 Recipe = recipe,
                 Ingredient = ingredient,
                 Quantity = baseQuantity,
-                Unit = baseUnit
+                Unit = baseUnit,
+                Modifier = modifier
             });
         }
     }

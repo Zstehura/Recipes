@@ -13,6 +13,18 @@ public class IngredientService
         _context = context;
     }
 
+    /// <summary>
+    /// Normalizes an ingredient name by trimming whitespace and capitalizing the first letter.
+    /// </summary>
+    public static string NormalizeName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return name;
+
+        var trimmed = name.Trim();
+        return char.ToUpper(trimmed[0]) + trimmed[1..];
+    }
+
     public async Task<List<Ingredient>> GetAllIngredientsAsync()
     {
         return await _context.Ingredients
@@ -52,7 +64,7 @@ public class IngredientService
             return false;
         }
 
-        ingredient.Name = newName.Trim();
+        ingredient.Name = NormalizeName(newName);
         await _context.SaveChangesAsync();
         return true;
     }
@@ -111,7 +123,8 @@ public class IngredientService
                     RecipeId = recipeIngredient.RecipeId,
                     IngredientId = targetId,
                     Quantity = recipeIngredient.Quantity,
-                    Unit = recipeIngredient.Unit
+                    Unit = recipeIngredient.Unit,
+                    Modifier = recipeIngredient.Modifier
                 };
                 
                 // Remove the old recipe ingredient
@@ -147,6 +160,19 @@ public class IngredientService
             await _context.SaveChangesAsync();
         }
         
+        return true;
+    }
+
+    public async Task<bool> DeleteIngredientAsync(int id)
+    {
+        var ingredient = await _context.Ingredients
+            .FirstOrDefaultAsync(i => i.Id == id);
+
+        if (ingredient == null)
+            return false;
+
+        _context.Ingredients.Remove(ingredient);
+        await _context.SaveChangesAsync();
         return true;
     }
 

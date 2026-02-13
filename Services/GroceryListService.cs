@@ -54,27 +54,29 @@ public class GroceryListService
             foreach (var recipeIngredient in recipe.RecipeIngredients)
             {
                 var ingredientName = recipeIngredient.Ingredient.Name;
+                var modifier = recipeIngredient.Modifier ?? "";
                 var baseUnit = recipeIngredient.Unit ?? UnitConversionService.BASE_COUNT_UNIT;
                 var quantity = recipeIngredient.Quantity ?? 0m;
                 var adjustedQuantity = quantity * multiplier;
 
-                if (ingredientDict.TryGetValue(ingredientName, out var existing))
+                // Group by ingredient name + modifier so "tomato (sliced)" and "tomato (diced)" stay separate
+                var groupKey = string.IsNullOrWhiteSpace(modifier) ? ingredientName : $"{ingredientName}|{modifier}";
+
+                if (ingredientDict.TryGetValue(groupKey, out var existing))
                 {
-                    // Ingredient already exists - add to quantity
-                    // Only add if same base unit, otherwise keep separate
                     if (existing.BaseUnit == baseUnit)
                     {
                         existing.TotalQuantity += adjustedQuantity;
                     }
                     else
                     {
-                        // Different base units - create a separate entry with unit suffix
-                        var uniqueKey = $"{ingredientName}_{baseUnit}";
+                        var uniqueKey = $"{groupKey}_{baseUnit}";
                         if (!ingredientDict.ContainsKey(uniqueKey))
                         {
                             ingredientDict[uniqueKey] = new AggregatedIngredient
                             {
                                 IngredientName = ingredientName,
+                                Modifier = modifier,
                                 TotalQuantity = adjustedQuantity,
                                 BaseUnit = baseUnit
                             };
@@ -87,10 +89,10 @@ public class GroceryListService
                 }
                 else
                 {
-                    // New ingredient
-                    ingredientDict[ingredientName] = new AggregatedIngredient
+                    ingredientDict[groupKey] = new AggregatedIngredient
                     {
                         IngredientName = ingredientName,
+                        Modifier = modifier,
                         TotalQuantity = adjustedQuantity,
                         BaseUnit = baseUnit
                     };
@@ -130,11 +132,11 @@ public class GroceryListService
             // Handle zero or very small quantities
             if (displayQuantity == 0 || displayQuantity < 0.01m)
             {
-                lines.Add($"- {ingredient.IngredientName} (trace amount)");
+                lines.Add($"- {ingredient.DisplayName} (trace amount)");
             }
             else
             {
-                lines.Add($"- {quantityStr} {unitName} {ingredient.IngredientName}");
+                lines.Add($"- {quantityStr} {unitName} {ingredient.DisplayName}");
             }
         }
 
@@ -148,7 +150,17 @@ public class GroceryListService
     private class AggregatedIngredient
     {
         public string IngredientName { get; set; } = string.Empty;
+        public string Modifier { get; set; } = string.Empty;
         public decimal TotalQuantity { get; set; }
         public string BaseUnit { get; set; } = string.Empty;
+
+        public string DisplayName
+        {
+            get
+            {
+                var name = IngredientService.NormalizeName(IngredientName);
+                return string.IsNullOrWhiteSpace(Modifier) ? name : $"{name} ({Modifier})";
+            }
+        }
     }
 }

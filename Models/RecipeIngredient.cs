@@ -13,5 +13,8 @@ public class RecipeIngredient
 
     // Unit stored as base unit string ("g", "ml", or "pieces")
     public string? Unit { get; set; }
+
+    // Preparation modifier (e.g., "sliced", "diced", "chopped")
+    public string? Modifier { get; set; }
 }
 

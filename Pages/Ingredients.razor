@@ -114,9 +114,13 @@ else
                                                     title="Change Default Unit">
                                                 <span class="bi bi-arrow-repeat"></span>
                                             </button>
-                                            <button class="btn btn-outline-info" @onclick="() => ShowMergeDialog(ingredient.Id)" 
+                                            <button class="btn btn-outline-info" @onclick="() => ShowMergeDialog(ingredient.Id)"
                                                     title="Merge with Another Ingredient">
                                                 <span class="bi bi-arrow-left-right"></span>
+                                            </button>
+                                            <button class="btn btn-outline-danger" @onclick="() => ShowDeleteDialog(ingredient.Id)"
+                                                    title="Delete Ingredient">
+                                                <span class="bi bi-trash"></span>
                                             </button>
                                         </div>
                                     </td>
@@ -165,6 +169,46 @@ else
     </div>
 }
 
+@* Delete Confirmation Dialog *@
+@if (showDeleteDialog)
+{
+    <div class="modal show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Delete Ingredient</h5>
+                    <button type="button" class="btn-close" @onclick="CloseDeleteDialog"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete <strong>@(deletingIngredient?.Name ?? "")</strong>?</p>
+                    @if (deletingRecipes != null && deletingRecipes.Any())
+                    {
+                        <div class="alert alert-danger">
+                            <strong>Warning:</strong> This ingredient will be removed from the following recipes:
+                            <ul class="mb-0 mt-2">
+                                @foreach (var recipe in deletingRecipes)
+                                {
+                                    <li>@recipe.Name</li>
+                                }
+                            </ul>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">This ingredient is not used in any recipes.</p>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDeleteDialog">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDelete">
+                        Delete Ingredient
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @* Success/Error Messages *@
 @if (!string.IsNullOrEmpty(message))
 {
@@ -185,6 +229,9 @@ else
     private int? mergingSourceId = null;
     private int mergingTargetId = 0;
     private Ingredient? mergingSourceIngredient = null;
+    private bool showDeleteDialog = false;
+    private Ingredient? deletingIngredient = null;
+    private List<Recipe>? deletingRecipes = null;
     private string message = string.Empty;
     private bool isError = false;
 
@@ -296,6 +343,39 @@ else
         else
         {
             ShowMessage("Failed to merge ingredients.", true);
+        }
+    }
+
+    private async Task ShowDeleteDialog(int id)
+    {
+        deletingIngredient = ingredients?.FirstOrDefault(i => i.Id == id);
+        deletingRecipes = await IngredientService.GetRecipesUsingIngredientAsync(id);
+        showDeleteDialog = true;
+    }
+
+    private void CloseDeleteDialog()
+    {
+        showDeleteDialog = false;
+        deletingIngredient = null;
+        deletingRecipes = null;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (deletingIngredient == null)
+            return;
+
+        var name = deletingIngredient.Name;
+        var success = await IngredientService.DeleteIngredientAsync(deletingIngredient.Id);
+        if (success)
+        {
+            ShowMessage($"'{name}' deleted successfully. It has been removed from all recipes.");
+            CloseDeleteDialog();
+            await LoadIngredientsAsync();
+        }
+        else
+        {
+            ShowMessage("Failed to delete ingredient.", true);
         }
     }
 

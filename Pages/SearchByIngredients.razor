@@ -119,7 +119,7 @@
                                        checked="@selectedIngredientIds.Contains(ingredient.Id)" 
                                        @onchange="@((e) => ToggleIngredient(ingredient.Id, e.Value))" />
                                 <label class="form-check-label" for="ingredient-@ingredient.Id">
-                                    @ingredient.Name
+                                    @IngredientService.NormalizeName(ingredient.Name)
                                 </label>
                             </div>
                         }
@@ -232,17 +232,21 @@
                             @foreach (var recipeIngredient in selectedRecipe.RecipeIngredients)
                             {
                                 <div class="ingredient-item">
+                                    @{
+                                        var modalIngredientName = IngredientService.NormalizeName(recipeIngredient.Ingredient.Name);
+                                        var modalModifier = !string.IsNullOrWhiteSpace(recipeIngredient.Modifier) ? $" ({recipeIngredient.Modifier})" : "";
+                                    }
                                     @if (recipeIngredient.Quantity.HasValue && !string.IsNullOrWhiteSpace(recipeIngredient.Unit))
                                     {
                                         // Convert from base unit to display unit
                                         var (displayQuantity, displayUnit) = UnitConversionService.ConvertFromBaseUnit(
-                                            recipeIngredient.Quantity.Value, 
+                                            recipeIngredient.Quantity.Value,
                                             recipeIngredient.Unit);
-                                        <strong>@displayQuantity.ToString("0.##") @UnitConversionService.GetUnitDisplayName(displayUnit)</strong> @recipeIngredient.Ingredient.Name
+                                        <strong>@displayQuantity.ToString("0.##") @UnitConversionService.GetUnitDisplayName(displayUnit)</strong> @modalIngredientName@modalModifier
                                     }
                                     else
                                     {
-                                        @recipeIngredient.Ingredient.Name
+                                        @modalIngredientName@modalModifier
                                     }
                                 </div>
                             }

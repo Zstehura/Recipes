@@ -415,7 +415,8 @@ Best served warm. Store in airtight container for up to 5 days.
                         {
                             Name = ingredientName,
                             Quantity = ri.Quantity,
-                            Unit = unit
+                            Unit = unit,
+                            Modifier = ri.Modifier ?? string.Empty
                         };
 
                         ingredientEntries.Add(entry);

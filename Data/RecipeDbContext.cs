@@ -35,7 +35,7 @@ public class RecipeDbContext : DbContext
         modelBuilder.Entity<Ingredient>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200).UseCollation("NOCASE");
             entity.HasIndex(e => e.Name).IsUnique();
             entity.Property(e => e.DefaultUnit)
                 .HasConversion<int>()
@@ -59,6 +59,7 @@ public class RecipeDbContext : DbContext
 
             entity.Property(e => e.Quantity).HasPrecision(18, 4);
             entity.Property(e => e.Unit).HasMaxLength(20);
+            entity.Property(e => e.Modifier).HasMaxLength(100);
         });
     }
 }

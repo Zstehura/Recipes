@@ -38,7 +38,8 @@ public class RecipeImportExportService
         {
             var quantity = ri.Quantity ?? 0;
             var unit = ri.Unit ?? "pieces";
-            sb.AppendLine($"{quantity}{unit} {ri.Ingredient.Name}");
+            var modifier = !string.IsNullOrWhiteSpace(ri.Modifier) ? $" ({ri.Modifier})" : "";
+            sb.AppendLine($"{quantity}{unit} {ri.Ingredient.Name}{modifier}");
         }
         sb.AppendLine();
 
@@ -402,17 +403,32 @@ public class RecipeImportExportService
                 {
                     Ingredient = new Ingredient { Name = entry.Name },
                     Quantity = entry.Quantity,
-                    Unit = ConvertUnitToBaseUnit(entry.Unit)
+                    Unit = ConvertUnitToBaseUnit(entry.Unit),
+                    Modifier = string.IsNullOrWhiteSpace(entry.Modifier) ? null : entry.Modifier
                 };
                 recipe.RecipeIngredients.Add(recipeIngredient);
             }
         }
     }
 
+    /// <summary>
+    /// Extracts a modifier from parentheses at the end of a name string.
+    /// e.g., "tomato (sliced)" returns ("tomato", "sliced")
+    /// </summary>
+    private static (string name, string modifier) ExtractModifier(string nameWithModifier)
+    {
+        var match = Regex.Match(nameWithModifier, @"^(.+?)\s*\(([^)]+)\)\s*$");
+        if (match.Success)
+        {
+            return (match.Groups[1].Value.Trim(), match.Groups[2].Value.Trim());
+        }
+        return (nameWithModifier, string.Empty);
+    }
+
     private IngredientEntry? ParseIngredientLine(string line)
     {
-        // Try to parse format with unit: "250g flour" or "2 pieces eggs"
-        // Regex: (quantity with optional fraction) (unit) (ingredient name)
+        // Try to parse format with unit: "250g flour (sliced)" or "2 pieces eggs"
+        // Regex: (quantity with optional fraction) (unit) (ingredient name with optional modifier)
         // Updated to allow hyphens in units (e.g., "fl-oz")
         var matchWithUnit = Regex.Match(line, @"^([\d\s\/\.]+)\s*([a-zA-Z\-]+)\s+(.+)$");
 
@@ -420,47 +436,52 @@ public class RecipeImportExportService
         {
             var quantityStr = matchWithUnit.Groups[1].Value.Trim();
             var unitStr = matchWithUnit.Groups[2].Value;
-            var name = matchWithUnit.Groups[3].Value.Trim();
+            var rawName = matchWithUnit.Groups[3].Value.Trim();
 
             var quantity = ParseQuantity(quantityStr);
             var unit = TryParseUnit(unitStr);
             if (quantity.HasValue && unit.HasValue)
             {
+                var (name, modifier) = ExtractModifier(rawName);
                 return new IngredientEntry
                 {
                     Name = name,
                     Quantity = quantity,
-                    Unit = unit.Value
+                    Unit = unit.Value,
+                    Modifier = modifier
                 };
             }
         }
 
-        // Try to parse format without unit: "2 eggs" (quantity + name)
+        // Try to parse format without unit: "2 eggs (beaten)" (quantity + name)
         var matchWithoutUnit = Regex.Match(line, @"^([\d\s\/\.]+)\s+(.+)$");
         if (matchWithoutUnit.Success)
         {
             var quantityStr = matchWithoutUnit.Groups[1].Value.Trim();
-            var name = matchWithoutUnit.Groups[2].Value.Trim();
+            var rawName = matchWithoutUnit.Groups[2].Value.Trim();
 
             var quantity = ParseQuantity(quantityStr);
             if (quantity.HasValue)
             {
-                // Default to pieces when no unit is specified
+                var (name, modifier) = ExtractModifier(rawName);
                 return new IngredientEntry
                 {
                     Name = name,
                     Quantity = quantity,
-                    Unit = MeasurementUnit.Pieces
+                    Unit = MeasurementUnit.Pieces,
+                    Modifier = modifier
                 };
             }
         }
 
         // Fallback: treat entire line as ingredient name with no quantity
+        var (fallbackName, fallbackModifier) = ExtractModifier(line);
         return new IngredientEntry
         {
-            Name = line,
+            Name = fallbackName,
             Quantity = null,
-            Unit = MeasurementUnit.Pieces
+            Unit = MeasurementUnit.Pieces,
+            Modifier = fallbackModifier
         };
     }
 

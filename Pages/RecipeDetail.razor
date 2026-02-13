@@ -60,17 +60,21 @@ else
                     @foreach (var recipeIngredient in recipe.RecipeIngredients)
                     {
                         <div class="ingredient-item">
+                            @{
+                                var ingredientDisplayName = IngredientService.NormalizeName(recipeIngredient.Ingredient.Name);
+                                var modifierDisplay = !string.IsNullOrWhiteSpace(recipeIngredient.Modifier) ? $" ({recipeIngredient.Modifier})" : "";
+                            }
                             @if (recipeIngredient.Quantity.HasValue && !string.IsNullOrWhiteSpace(recipeIngredient.Unit))
                             {
                                 // Convert from base unit to display unit
                                 var (displayQuantity, displayUnit) = UnitConversionService.ConvertFromBaseUnit(
-                                    recipeIngredient.Quantity.Value, 
+                                    recipeIngredient.Quantity.Value,
                                     recipeIngredient.Unit);
-                                <strong>@displayQuantity.ToString("0.##") @UnitConversionService.GetUnitDisplayName(displayUnit) </strong> @recipeIngredient.Ingredient.Name
+                                <strong>@displayQuantity.ToString("0.##") @UnitConversionService.GetUnitDisplayName(displayUnit) </strong> @ingredientDisplayName@modifierDisplay
                             }
                             else
                             {
-                                @recipeIngredient.Ingredient.Name
+                                @ingredientDisplayName@modifierDisplay
                             }
                         </div>
                     }
