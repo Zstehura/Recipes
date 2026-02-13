@@ -423,20 +423,20 @@ public class RecipeImportExportService
             var name = matchWithUnit.Groups[3].Value.Trim();
 
             var quantity = ParseQuantity(quantityStr);
-            if (quantity.HasValue)
+            var unit = TryParseUnit(unitStr);
+            if (quantity.HasValue && unit.HasValue)
             {
-                var unit = ParseUnit(unitStr);
                 return new IngredientEntry
                 {
                     Name = name,
                     Quantity = quantity,
-                    Unit = unit
+                    Unit = unit.Value
                 };
             }
         }
 
         // Try to parse format without unit: "2 eggs" (quantity + name)
-        var matchWithoutUnit = Regex.Match(line, @"^([\d\s\/]+)\s+(.+)$");
+        var matchWithoutUnit = Regex.Match(line, @"^([\d\s\/\.]+)\s+(.+)$");
         if (matchWithoutUnit.Success)
         {
             var quantityStr = matchWithoutUnit.Groups[1].Value.Trim();
@@ -467,7 +467,7 @@ public class RecipeImportExportService
     private decimal? ParseQuantity(string quantityStr)
     {
         // Handle fractions like "3/4", "1/2"
-        var fractionMatch = Regex.Match(quantityStr, @"^(\d+)\s*/\s*(\d+)$");
+        var fractionMatch = Regex.Match(quantityStr, @"^(\d+)\s*\/\s*(\d+)$");
         if (fractionMatch.Success)
         {
             if (decimal.TryParse(fractionMatch.Groups[1].Value, out var numerator) &&
@@ -479,7 +479,7 @@ public class RecipeImportExportService
         }
 
         // Handle mixed fractions like "1 1/2", "2 3/4"
-        var mixedMatch = Regex.Match(quantityStr, @"^(\d+)\s+(\d+)\s*/\s*(\d+)$");
+        var mixedMatch = Regex.Match(quantityStr, @"^(\d+)\s+(\d+)\s*\/\s*(\d+)$");
         if (mixedMatch.Success)
         {
             if (decimal.TryParse(mixedMatch.Groups[1].Value, out var whole) &&
@@ -500,7 +500,7 @@ public class RecipeImportExportService
         return null;
     }
 
-    private MeasurementUnit ParseUnit(string unitStr)
+    private MeasurementUnit? TryParseUnit(string unitStr)
     {
         var unit = unitStr.ToLower().Trim();
 
@@ -517,7 +517,7 @@ public class RecipeImportExportService
             "tsp" or "teaspoon" or "teaspoons" => MeasurementUnit.Teaspoons,
             "fl oz" or "floz" or "fluidounce" or "fluidounces" => MeasurementUnit.FluidOunces,
             "piece" or "pieces" or "pcs" or "pc" => MeasurementUnit.Pieces,
-            _ => MeasurementUnit.Pieces // Default fallback
+            _ => null
         };
     }
 
