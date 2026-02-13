@@ -1,0 +1,8 @@
+services:
+  recipes:
+    build: .
+    ports:
+      - "5000:8080"
+    volumes:
+      - ./data:/app/Data
+    restart: unless-stopped

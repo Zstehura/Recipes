@@ -1,59 +1,87 @@
-# Recipes App
+# Recipes
 
-A Blazor Server application for storing and managing recipes with SQLite database storage.
+A self-hosted recipe manager built with Blazor Server and SQLite. Store your recipes, manage ingredients, generate grocery lists, and search your collection by what you have on hand.
 
 ## Features
 
-- Create, read, update, and delete recipes
-- Search recipes by name, ingredients, or tags
-- Recipe fields include:
-  - Name
-  - Ingredients
-  - Instructions
-  - Cooking Time (minutes)
-  - Servings
-  - Tags
-  - Notes
+- **Recipe Management** - Create, edit, and delete recipes with ingredients, instructions, cooking time, servings, tags, notes, and images
+- **Ingredient Tracking** - Manage a shared ingredient library with default units, renaming, and merging of duplicates
+- **Search & Filtering** - Full-text search by name, ingredients, or tags with filters for cooking time, servings, and tags
+- **Search by Available Ingredients** - Find recipes you can make with the ingredients you already have
+- **Grocery List Generator** - Select recipes, set quantity multipliers, and get an aggregated shopping list with smart unit conversion
+- **Import/Export** - Batch import and export recipes in a structured text format
+- **Image Support** - Attach photos to recipes (up to 10MB each)
 
-## Prerequisites
+## Tech Stack
 
-- .NET 8.0 SDK or later
-- Visual Studio 2022, Visual Studio Code, or any IDE with .NET support
+- .NET 8 / Blazor Server
+- Entity Framework Core with SQLite
+- Bootstrap 5 + Bootstrap Icons
 
-## Getting Started
+## Deployment (Docker)
 
-1. Restore dependencies:
+### Prerequisites
+
+- [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/)
+
+### Quick Start
+
+1. Clone the repository:
+   ```bash
+   git clone <your-repo-url>
+   cd Recipes
    ```
-   dotnet restore
+
+2. Build and start the container:
+   ```bash
+   docker compose up -d
    ```
 
-2. Run the application:
-   ```
-   dotnet run
-   ```
+3. Open `http://<your-server-ip>:5000` in your browser.
 
-3. Open your browser and navigate to:
-   - HTTP: `http://localhost:5000`
-   - HTTPS: `https://localhost:5001`
+The database is stored in a `data/` directory on the host via a volume mount, so your recipes persist across container restarts and rebuilds.
 
-## Database
+### Updating
 
-The application uses SQLite database stored in `Data/recipes.db`. The database will be automatically created when you first run the application.
+Pull the latest changes and rebuild:
+```bash
+git pull
+docker compose up -d --build
+```
+
+### Configuration
+
+The default port mapping is `5000:8080`. To change the host port, edit [docker-compose.yml](docker-compose.yml):
+
+```yaml
+ports:
+  - "3000:8080"  # change 3000 to your desired port
+```
+
+## Local Development
+
+### Prerequisites
+
+- .NET 8.0 SDK
+
+### Running
+
+```bash
+dotnet restore
+dotnet run
+```
+
+The app will be available at `http://localhost:5000` (or `https://localhost:5001`).
+
+The SQLite database is auto-created at `Data/recipes.db` on first run.
 
 ## Project Structure
 
-- `Models/` - Data models (Recipe)
-- `Data/` - Database context (RecipeDbContext)
-- `Services/` - Business logic (RecipeService)
-- `Pages/` - Blazor pages (Index, RecipeForm, RecipeDetail)
-- `Shared/` - Shared components (MainLayout, NavMenu)
-- `wwwroot/` - Static files (CSS, etc.)
-
-## Technologies Used
-
-- Blazor Server
-- Entity Framework Core
-- SQLite
-- Bootstrap 5
-- Bootstrap Icons
-
+```
+Models/          Data models (Recipe, Ingredient, RecipeIngredient)
+Data/            EF Core DbContext and SQLite database
+Services/        Business logic (recipes, ingredients, grocery list, import/export, unit conversion)
+Pages/           Blazor pages (recipe list, form, detail, ingredients, search, grocery list, import/export)
+Shared/          Layout and navigation components
+wwwroot/         Static assets (CSS, Bootstrap)
+```

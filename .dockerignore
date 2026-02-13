@@ -1,0 +1,13 @@
+bin/
+obj/
+.git/
+.gitignore
+.vs/
+*.user
+*.suo
+Data/recipes.db
+Data/recipes.db-shm
+Data/recipes.db-wal
+docker-compose.yml
+Dockerfile
+README.md

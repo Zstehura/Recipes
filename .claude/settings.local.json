@@ -6,7 +6,8 @@
       "Bash(cd:*)",
       "Bash(dotnet restore:*)",
       "Bash(dotnet package search:*)",
-      "Bash(dotnet add:*)"
+      "Bash(dotnet add:*)",
+      "Bash(git -C \"c:\\\\Users\\\\zacks\\\\Coding Projects\\\\Recipes\\\\Recipes\" log --oneline -10)"
     ]
   }
 }
