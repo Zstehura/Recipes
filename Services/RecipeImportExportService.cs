@@ -438,8 +438,8 @@ public class RecipeImportExportService
     {
         // Try to parse format with unit: "250g flour (sliced)" or "2 pieces eggs"
         // Regex: (quantity with optional fraction) (unit) (ingredient name with optional modifier)
-        // Updated to allow hyphens in units (e.g., "fl-oz")
-        var matchWithUnit = Regex.Match(line, @"^([\d\s\/\.]+)\s*([a-zA-Z\-]+)\s+(.+)$");
+        // The unit allows hyphens ("fl-oz"); "fl oz" is listed first because it contains a space.
+        var matchWithUnit = Regex.Match(line, @"^([\d\s\/\.]+)\s*(fl\s*oz|[a-zA-Z\-]+)\s+(.+)$", RegexOptions.IgnoreCase);
 
         if (matchWithUnit.Success)
         {
@@ -532,7 +532,8 @@ public class RecipeImportExportService
 
     private MeasurementUnit? TryParseUnit(string unitStr)
     {
-        var unit = unitStr.ToLower().Trim();
+        // Collapse internal whitespace so "fl  oz" matches "fl oz"
+        var unit = Regex.Replace(unitStr.Trim().ToLowerInvariant(), @"\s+", " ");
 
         return unit switch
         {
@@ -545,7 +546,7 @@ public class RecipeImportExportService
             "cup" or "cups" => MeasurementUnit.Cups,
             "tbsp" or "tablespoon" or "tablespoons" => MeasurementUnit.Tablespoons,
             "tsp" or "teaspoon" or "teaspoons" => MeasurementUnit.Teaspoons,
-            "fl oz" or "floz" or "fluidounce" or "fluidounces" => MeasurementUnit.FluidOunces,
+            "fl oz" or "floz" or "fl-oz" or "fluidounce" or "fluidounces" => MeasurementUnit.FluidOunces,
             "piece" or "pieces" or "pcs" or "pc" => MeasurementUnit.Pieces,
             _ => null
         };

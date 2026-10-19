@@ -115,7 +115,6 @@ public class RecipeImportExportServiceTests
     [InlineData("3 eggs", 3, "pieces", "eggs")]
     [InlineData("3 large eggs", 3, "pieces", "large eggs")]
     [InlineData("2 cloves garlic", 2, "pieces", "cloves garlic")]
-    [InlineData("2 floz cream", 59.147, "ml", "cream")]
     [InlineData("1 TBSP oil", 14.7868, "ml", "oil")]
     public void ParseRecipeText_IngredientLine_ParsesQuantityUnitAndName(
         string line, double expectedQuantity, string expectedBaseUnit, string expectedName)
@@ -198,13 +197,28 @@ public class RecipeImportExportServiceTests
         ingredient.Unit.ShouldBe(expectedBaseUnit);
     }
 
-    [Fact(Skip = "Bug #4: the unit pattern does not allow spaces, so 'fl oz' is never recognized")]
-    public void ParseRecipeText_FluidOuncesWithSpace_ParsesAsFluidOunces()
+    [Theory]
+    [InlineData("2 fl oz cream")]
+    [InlineData("2 FL OZ cream")]
+    [InlineData("2 fl  oz cream")]
+    [InlineData("2 fl-oz cream")]
+    [InlineData("2floz cream")]
+    public void ParseRecipeText_FluidOunceSpellings_ParseAsFluidOunces(string line)
     {
-        var ingredient = ParseSingleIngredient("2 fl oz cream");
+        var ingredient = ParseSingleIngredient(line);
 
+        ingredient.Quantity.ShouldBe(59.147m);
         ingredient.Unit.ShouldBe("ml");
         ingredient.Ingredient.Name.ShouldBe("cream");
+    }
+
+    [Fact]
+    public void ParseRecipeText_NameStartingWithFl_IsNotMistakenForFluidOunces()
+    {
+        var ingredient = ParseSingleIngredient("2 flowers");
+
+        ingredient.Unit.ShouldBe("pieces");
+        ingredient.Ingredient.Name.ShouldBe("flowers");
     }
 
     // ---------------------------------------------------------------- Parsing: whitespace
