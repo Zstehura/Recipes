@@ -1,6 +1,69 @@
-obj/Debug/*
-bin/Debug/*
-Data/recipes.db
-obj/project.assets.json
-obj/project.nuget.cache
-obj/RecipesApp.csproj.nuget.dgspec.json
+# ----------------------------------------------------------------------------
+# .NET build output
+# ----------------------------------------------------------------------------
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+artifacts/
+publish/
+*.nupkg
+*.snupkg
+
+# Test results and coverage reports
+[Tt]est[Rr]esults/
+coverage/
+coverage*.json
+coverage*.xml
+coverage*.info
+*.coverage
+*.coveragexml
+
+# ----------------------------------------------------------------------------
+# IDEs and editors
+# ----------------------------------------------------------------------------
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# JetBrains Rider
+.idea/
+*.sln.iml
+
+# VS Code: keep shared launch/tasks/settings, ignore everything else
+.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# Claude Code local settings (machine-specific)
+.claude/settings.local.json
+
+# ----------------------------------------------------------------------------
+# Data: recipe databases are personal and never committed
+# ----------------------------------------------------------------------------
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Docker Compose bind-mount volume (see docker-compose.yml)
+/data/
+
+# ----------------------------------------------------------------------------
+# OS files
+# ----------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ----------------------------------------------------------------------------
+# Local planning and study docs (not committed)
+# ----------------------------------------------------------------------------
+docs/RECIPES_PROJECT_BRIEF.md
+NOTES_FOR_OWNER.md
