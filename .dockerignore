@@ -1,13 +1,32 @@
-bin/
-obj/
+# Keep the Docker build context small and free of local data/secrets.
+
+# Build output
+**/bin/
+**/obj/
+**/TestResults/
+
+# Source control and editor files
 .git/
 .gitignore
+.gitattributes
 .vs/
+.vscode/
+.idea/
+.claude/
 *.user
 *.suo
-Data/recipes.db
-Data/recipes.db-shm
-Data/recipes.db-wal
+**/.DS_Store
+
+# Databases (personal data) and the compose volume folder
+**/*.db
+**/*.db-shm
+**/*.db-wal
+data/
+
+# Not needed inside the image
+docs/
+NOTES_FOR_OWNER.md
+README.md
 docker-compose.yml
 Dockerfile
-README.md
+.dockerignore
