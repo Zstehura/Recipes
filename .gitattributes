@@ -1,0 +1,13 @@
+# Normalize line endings: store LF in the repo, check out native endings.
+* text=auto
+
+# Binary files: never touch line endings or attempt text diffs
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.db binary
+*.woff binary
+*.woff2 binary
