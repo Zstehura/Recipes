@@ -148,7 +148,7 @@ else
                     <p>Select the ingredient to merge <strong>@(mergingSourceIngredient?.Name ?? "")</strong> into:</p>
                     <select class="form-select" @bind="mergingTargetId">
                         <option value="0">-- Select Ingredient --</option>
-                        @foreach (var ingredient in ingredients.Where(i => i.Id != mergingSourceId))
+                        @foreach (var ingredient in (ingredients ?? Enumerable.Empty<Ingredient>()).Where(i => i.Id != mergingSourceId))
                         {
                             <option value="@ingredient.Id">@ingredient.Name</option>
                         }

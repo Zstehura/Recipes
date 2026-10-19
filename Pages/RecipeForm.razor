@@ -7,9 +7,9 @@
 @inject RecipeService RecipeService
 @inject NavigationManager Navigation
 
-<PageTitle>@(recipe?.Id > 0 ? "Edit Recipe" : "New Recipe")</PageTitle>
+<PageTitle>@(recipe.Id > 0 ? "Edit Recipe" : "New Recipe")</PageTitle>
 
-<h1>@(recipe?.Id > 0 ? "Edit Recipe" : "New Recipe")</h1>
+<h1>@(recipe.Id > 0 ? "Edit Recipe" : "New Recipe")</h1>
 
 <EditForm Model="@recipe" OnValidSubmit="@HandleValidSubmit">
     <DataAnnotationsValidator />
