@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using RecipesApp.Data;
 using RecipesApp.Services;
@@ -9,6 +10,17 @@ builder.Services.AddRazorPages();
 // Blazor's SignalR hub keeps its default 32 KB message limit. File uploads (InputFile)
 // stream in chunks, so they don't need a larger limit.
 builder.Services.AddServerSideBlazor();
+
+// Keep the data protection key ring next to the database (the Docker volume) so it survives
+// container restarts. Blazor uses these keys for circuit IDs and for the encrypted browser
+// storage that holds unsaved drafts; keys that vanish on restart would make drafts unreadable
+// after every update. The folder is configurable so tests can use a temporary one.
+var keysDirectory = Path.Combine(
+    builder.Environment.ContentRootPath,
+    builder.Configuration["DataProtection:KeysDirectory"] ?? Path.Combine("Data", "keys"));
+builder.Services.AddDataProtection()
+    .SetApplicationName("RecipesApp")
+    .PersistKeysToFileSystem(new DirectoryInfo(keysDirectory));
 
 // Add Entity Framework
 builder.Services.AddDbContext<RecipeDbContext>(options =>

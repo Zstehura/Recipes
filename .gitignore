@@ -53,6 +53,8 @@ coverage*.info
 *.sqlite3
 # Backups written before a schema upgrade (see Data/DatabaseInitializer.cs)
 *.db.backup-*
+# ASP.NET Core data protection keys (secrets; see Program.cs)
+Data/keys/
 
 # Note: no folder rule for the Docker volume (data/). On case-insensitive file systems
 # (macOS, Windows) "/data/" would also match the Data/ source folder. The file patterns

@@ -17,12 +17,14 @@ namespace Recipes.Tests.Integration;
 public sealed class RecipeImageEndpointTests : IDisposable
 {
     private readonly string _databasePath = Path.Combine(Path.GetTempPath(), $"recipes-test-{Guid.NewGuid():N}.db");
+    private readonly string _keysDirectory = Path.Combine(Path.GetTempPath(), $"recipes-test-keys-{Guid.NewGuid():N}");
     private readonly WebApplicationFactory<Program> _factory;
 
     public RecipeImageEndpointTests()
     {
-        _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
-            builder.UseSetting("ConnectionStrings:DefaultConnection", $"Data Source={_databasePath}"));
+        _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder => builder
+            .UseSetting("ConnectionStrings:DefaultConnection", $"Data Source={_databasePath}")
+            .UseSetting("DataProtection:KeysDirectory", _keysDirectory));
     }
 
     public void Dispose()
@@ -30,6 +32,10 @@ public sealed class RecipeImageEndpointTests : IDisposable
         _factory.Dispose();
         Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
         File.Delete(_databasePath);
+        if (Directory.Exists(_keysDirectory))
+        {
+            Directory.Delete(_keysDirectory, recursive: true);
+        }
     }
 
     private int SeedRecipe(byte[]? image, string? contentType)
@@ -107,6 +113,17 @@ public sealed class RecipeImageEndpointTests : IDisposable
         body.ShouldContain("Something went wrong");
         body.ShouldNotContain("SqliteException");
         body.ShouldNotContain("no such table");
+    }
+
+    [Fact]
+    public async Task DataProtectionKeys_ArePersistedToConfiguredDirectory()
+    {
+        var client = _factory.CreateClient();
+
+        // Rendering the Blazor host page protects the circuit descriptor, which creates a key
+        await client.GetAsync("/");
+
+        Directory.GetFiles(_keysDirectory, "key-*.xml").ShouldNotBeEmpty();
     }
 
     [Theory]
