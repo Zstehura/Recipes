@@ -504,3 +504,39 @@ a.nav-button.active,
     }
 }
 
+
+/* Reconnection banner (see _Layout.cshtml). Hidden unless Blazor sets a reconnect state class. */
+#components-reconnect-modal.reconnect-banner {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 2000;
+    padding: 0.75rem 1rem;
+    background: #3a0647;
+    color: #fff;
+    text-align: center;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+#components-reconnect-modal.components-reconnect-show,
+#components-reconnect-modal.components-reconnect-retrying,
+#components-reconnect-modal.components-reconnect-paused,
+#components-reconnect-modal.components-reconnect-failed,
+#components-reconnect-modal.components-reconnect-rejected {
+    display: block;
+}
+
+#components-reconnect-modal .reconnect-message {
+    display: none;
+    margin: 0;
+}
+
+#components-reconnect-modal.components-reconnect-show .reconnect-message-retrying,
+#components-reconnect-modal.components-reconnect-retrying .reconnect-message-retrying,
+#components-reconnect-modal.components-reconnect-paused .reconnect-message-retrying,
+#components-reconnect-modal.components-reconnect-failed .reconnect-message-failed,
+#components-reconnect-modal.components-reconnect-rejected .reconnect-message-rejected {
+    display: block;
+}

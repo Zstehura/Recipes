@@ -13,6 +13,22 @@
 <body>
     @RenderBody()
 
+    @* Custom reconnection UI. Blazor toggles components-reconnect-* classes on this element;
+       the styles are in css/app.css and the behavior in js/reconnect.js. *@
+    <div id="components-reconnect-modal" class="reconnect-banner" role="status" aria-live="polite">
+        <p class="reconnect-message reconnect-message-retrying">
+            <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+            Reconnecting&hellip; Your unsaved changes are kept on this device.
+        </p>
+        <p class="reconnect-message reconnect-message-failed">
+            Can't reach the app right now. Your unsaved changes are kept on this device.
+            <button type="button" class="btn btn-sm btn-light ms-2" id="reconnect-retry">Try again</button>
+        </p>
+        <p class="reconnect-message reconnect-message-rejected">
+            Reloading to reconnect&hellip;
+        </p>
+    </div>
+
     <div id="blazor-error-ui">
         <environment include="Staging,Production">
             An error has occurred. This application may no longer respond until reloaded.
@@ -26,6 +42,7 @@
 
     <script src="_framework/blazor.server.js"></script>
     <script src="js/drafts.js"></script>
+    <script src="js/reconnect.js"></script>
 </body>
 </html>
 

@@ -10,7 +10,15 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorPages();
 // Blazor's SignalR hub keeps its default 32 KB message limit. File uploads (InputFile)
 // stream in chunks, so they don't need a larger limit.
-builder.Services.AddServerSideBlazor();
+builder.Services.AddServerSideBlazor(options =>
+{
+    // Keep a disconnected tab's circuit (its in-memory page state) for 30 minutes instead of
+    // the default 3, so switching to another app for a while reconnects seamlessly. Each
+    // retained circuit costs that tab's component state in server memory, which is negligible
+    // at household scale; the default cap of 100 retained circuits still applies. Anything
+    // longer is covered by browser drafts.
+    options.DisconnectedCircuitRetentionPeriod = TimeSpan.FromMinutes(30);
+});
 
 // Keep the data protection key ring next to the database (the Docker volume) so it survives
 // container restarts. Blazor uses these keys for circuit IDs and for the encrypted browser

@@ -126,6 +126,29 @@ public sealed class RecipeImageEndpointTests : IDisposable
         Directory.GetFiles(_keysDirectory, "key-*.xml").ShouldNotBeEmpty();
     }
 
+    [Fact]
+    public void DisconnectedCircuits_AreRetainedFor30Minutes()
+    {
+        var options = _factory.Services
+            .GetRequiredService<Microsoft.Extensions.Options.IOptions<Microsoft.AspNetCore.Components.Server.CircuitOptions>>()
+            .Value;
+
+        options.DisconnectedCircuitRetentionPeriod.ShouldBe(TimeSpan.FromMinutes(30));
+    }
+
+    [Fact]
+    public async Task HostPage_IncludesReconnectionBannerAndDraftScripts()
+    {
+        var client = _factory.CreateClient();
+
+        var html = await client.GetStringAsync("/");
+
+        html.ShouldContain("id=\"components-reconnect-modal\"");
+        html.ShouldContain("js/drafts.js");
+        html.ShouldContain("js/reconnect.js");
+        (await client.GetAsync("/js/reconnect.js")).StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
     [Theory]
     [InlineData("/")]
     [InlineData("/api/recipe/1/image")]
