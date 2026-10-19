@@ -36,12 +36,19 @@ A self-hosted recipe manager built with Blazor Server and SQLite. Store your rec
    cd Recipes
    ```
 
-2. Build and start the container:
+2. Create the data folder and give it to the container's user. The app runs as a non-root user (UID 1654), so it needs write access to this folder:
+   ```bash
+   mkdir -p data
+   sudo chown 1654:1654 data
+   ```
+   (On Docker Desktop for macOS or Windows, `mkdir -p data` is enough.)
+
+3. Build and start the container:
    ```bash
    docker compose up -d
    ```
 
-3. Open `http://localhost:5000` in your browser (or `http://<server-ip>:5000` from another device on your network).
+4. Open `http://localhost:5000` in your browser (or `http://<server-ip>:5000` from another device on your network).
 
 The database is stored in a `data/` directory on the host via a volume mount, so your recipes persist across container restarts and rebuilds.
 
@@ -52,6 +59,14 @@ Pull the latest changes and rebuild:
 git pull
 docker compose up -d --build
 ```
+
+**Upgrading from a version that ran as root** (before the non-root image): the existing `data/` folder is owned by root, so give it to the container's user once, before rebuilding:
+```bash
+sudo chown -R 1654:1654 data
+```
+If the container then fails to start with "unable to open database file", the folder ownership is the cause.
+
+When a new version changes the database structure, the app upgrades the database automatically on startup and first writes a backup next to it (`data/recipes.db.backup-<timestamp>`). Once you've confirmed everything works, you can delete the backup.
 
 ### Configuration
 
