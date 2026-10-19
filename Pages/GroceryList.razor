@@ -6,6 +6,7 @@
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
 @inject ILogger<GroceryList> Logger
+@inject DraftService Drafts
 
 <PageTitle>Grocery List</PageTitle>
 
@@ -259,11 +260,65 @@
     private int? maxServings;
     private List<string> availableTags = new();
     private HashSet<string> selectedTags = new();
+    private DraftAutosave<GroceryListDraft>? autosave;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadRecipes();
         await LoadAvailableTags();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Browser storage is only reachable once the page is interactive
+            await RestoreDraftAsync();
+            return;
+        }
+
+        if (autosave != null)
+        {
+            await autosave.SaveIfChangedAsync(CaptureDraft());
+        }
+    }
+
+    private GroceryListDraft CaptureDraft() => new(
+        new SortedDictionary<int, int>(selectedRecipeMultipliers),
+        new SortedDictionary<int, string>(selectedRecipeNames),
+        generatedGroceryList,
+        searchTerm,
+        showFilters,
+        minCookTime,
+        maxCookTime,
+        minServings,
+        maxServings,
+        selectedTags.Order().ToList());
+
+    private async Task RestoreDraftAsync()
+    {
+        autosave = new DraftAutosave<GroceryListDraft>(Drafts, GroceryListDraft.Key, DraftLifetime.Device);
+        var baseline = CaptureDraft();
+
+        var draft = await Drafts.RestoreAsync<GroceryListDraft>(GroceryListDraft.Key, DraftLifetime.Device);
+        if (draft != null)
+        {
+            var saved = draft.Value;
+            selectedRecipeMultipliers = new Dictionary<int, int>(saved.Multipliers);
+            selectedRecipeNames = new Dictionary<int, string>(saved.RecipeNames);
+            generatedGroceryList = saved.GeneratedList;
+            searchTerm = saved.SearchTerm;
+            showFilters = saved.ShowFilters;
+            minCookTime = saved.MinCookTime;
+            maxCookTime = saved.MaxCookTime;
+            minServings = saved.MinServings;
+            maxServings = saved.MaxServings;
+            selectedTags = saved.Tags.ToHashSet();
+            await LoadRecipes();   // re-run the search with the restored filters
+        }
+
+        autosave.Start(baseline);
+        StateHasChanged();
     }
 
     private async Task LoadRecipes()

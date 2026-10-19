@@ -1,11 +1,5 @@
 using Bunit;
-using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-using Recipes.Tests.Data;
-using Recipes.Tests.TestData;
 using RecipesApp.Models;
 using RecipesApp.Pages;
 using RecipesApp.Services;
@@ -18,31 +12,8 @@ namespace Recipes.Tests.Components;
 /// Renders the real recipe form (bUnit) against a real SQLite database, with the browser storage
 /// replaced by an in-memory draft store, to check that drafts are restored, saved, and cleared.
 /// </summary>
-public sealed class RecipeFormDraftTests : BunitContext
+public sealed class RecipeFormDraftTests : ComponentTestBase
 {
-    private readonly SqliteTestDatabase _db = new();
-    private readonly InMemoryDraftStore _store = new();
-    private readonly ManualTimeProvider _clock = new();
-    private readonly DraftService _drafts;
-
-    public RecipeFormDraftTests()
-    {
-        _drafts = new DraftService(_store, _clock, NullLogger<DraftService>.Instance);
-        Services.AddSingleton<TimeProvider>(_clock);
-        Services.AddSingleton(_drafts);
-        Services.AddSingleton(_ => new RecipeService(_db.CreateContext(), NullLogger<RecipeService>.Instance));
-        Services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
-    }
-
-    protected override void Dispose(bool disposing)
-    {
-        if (disposing)
-        {
-            _db.Dispose();
-        }
-        base.Dispose(disposing);
-    }
-
     private static RecipeDraft CompleteDraft(DateTime? baseModifiedDate = null) => new(
         Name: "Tomato soup",
         Instructions: "Simmer for 20 minutes.",
@@ -54,25 +25,22 @@ public sealed class RecipeFormDraftTests : BunitContext
         BaseModifiedDate: baseModifiedDate);
 
     private Task SeedDraftAsync(int recipeId, RecipeDraft draft) =>
-        _drafts.SaveAsync(RecipeDraft.KeyFor(recipeId), draft, DraftLifetime.Device);
+        Drafts.SaveAsync(RecipeDraft.KeyFor(recipeId), draft, DraftLifetime.Device);
 
-    private bool HasDraft(int recipeId) =>
-        _store.Values.ContainsKey((DraftLifetime.Device, RecipeDraft.KeyFor(recipeId)));
+    private bool HasDraft(int recipeId) => HasDraft(RecipeDraft.KeyFor(recipeId));
 
     private DateTime StoredModifiedDate(int recipeId)
     {
-        using var context = _db.CreateContext();
+        using var context = Db.CreateContext();
         return context.Recipes.AsNoTracking().Single(r => r.Id == recipeId).ModifiedDate;
     }
-
-    private string NavigatedTo => Services.GetRequiredService<NavigationManager>().Uri;
 
     [Fact]
     public void NewRecipe_OpenedWithoutChanges_CreatesNoDraft()
     {
         Render<RecipeForm>();
 
-        _store.WriteCount.ShouldBe(0);
+        Store.WriteCount.ShouldBe(0);
     }
 
     [Fact]
@@ -89,7 +57,7 @@ public sealed class RecipeFormDraftTests : BunitContext
     public async Task NewRecipe_WithSavedDraft_RestoresFormAndShowsNotice()
     {
         await SeedDraftAsync(0, CompleteDraft());
-        _clock.Advance(TimeSpan.FromMinutes(5));
+        Clock.Advance(TimeSpan.FromMinutes(5));
 
         var cut = Render<RecipeForm>();
 
@@ -101,7 +69,7 @@ public sealed class RecipeFormDraftTests : BunitContext
     [Fact]
     public async Task NewRecipe_WithCorruptDraft_ShowsEmptyFormAndDeletesDraft()
     {
-        _store.Values[(DraftLifetime.Device, RecipeDraft.KeyFor(0))] = "{ not valid json";
+        Store.Values[(DraftLifetime.Device, RecipeDraft.KeyFor(0))] = "{ not valid json";
 
         var cut = Render<RecipeForm>();
 
@@ -113,7 +81,7 @@ public sealed class RecipeFormDraftTests : BunitContext
     [Fact]
     public async Task EditRecipe_DraftFromCurrentVersion_IsRestored()
     {
-        var id = _db.SeedRecipe("Bread", "Flour");
+        var id = Db.SeedRecipe("Bread", "Flour");
         await SeedDraftAsync(id, CompleteDraft(baseModifiedDate: StoredModifiedDate(id)) with { Name = "Sourdough" });
 
         var cut = Render<RecipeForm>(p => p.Add(f => f.Id, id));
@@ -124,7 +92,7 @@ public sealed class RecipeFormDraftTests : BunitContext
     [Fact]
     public async Task EditRecipe_DraftFromOlderVersion_IsDiscardedWithWarning()
     {
-        var id = _db.SeedRecipe("Bread", "Flour");
+        var id = Db.SeedRecipe("Bread", "Flour");
         var olderVersion = StoredModifiedDate(id).AddDays(-1);
         await SeedDraftAsync(id, CompleteDraft(baseModifiedDate: olderVersion) with { Name = "Sourdough" });
 
@@ -146,7 +114,7 @@ public sealed class RecipeFormDraftTests : BunitContext
 
         cut.WaitForAssertion(() => HasDraft(0).ShouldBeFalse());
         NavigatedTo.ShouldBe("http://localhost/");
-        using var context = _db.CreateContext();
+        using var context = Db.CreateContext();
         context.Recipes.Single().Name.ShouldBe("Tomato soup");
     }
 
