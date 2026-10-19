@@ -28,7 +28,7 @@ A self-hosted recipe manager built with Blazor Server and SQLite. Store your rec
 
 1. Clone the repository:
    ```bash
-   git clone <your-repo-url>
+   git clone https://github.com/Zstehura/Recipes.git
    cd Recipes
    ```
 
@@ -37,7 +37,7 @@ A self-hosted recipe manager built with Blazor Server and SQLite. Store your rec
    docker compose up -d
    ```
 
-3. Open `http://<your-server-ip>:5000` in your browser.
+3. Open `http://localhost:5000` in your browser (or `http://<server-ip>:5000` from another device on your network).
 
 The database is stored in a `data/` directory on the host via a volume mount, so your recipes persist across container restarts and rebuilds.
 
