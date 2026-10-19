@@ -1,5 +1,9 @@
 # Recipes
 
+[![CI](https://github.com/Zstehura/Recipes/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Zstehura/Recipes/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/Zstehura/Recipes/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/Zstehura/Recipes/actions/workflows/codeql.yml)
+[![codecov](https://codecov.io/gh/Zstehura/Recipes/branch/main/graph/badge.svg)](https://codecov.io/gh/Zstehura/Recipes)
+
 A self-hosted recipe manager built with Blazor Server and SQLite. Store your recipes, manage ingredients, generate grocery lists, and search your collection by what you have on hand.
 
 ## Features
@@ -75,6 +79,14 @@ The app will be available at `http://localhost:5000` (or `https://localhost:5001
 
 The SQLite database is auto-created at `Data/recipes.db` on first run.
 
+### Running Tests
+
+```bash
+dotnet test
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for running tests with Docker only, collecting coverage, and what CI checks.
+
 ## Project Structure
 
 ```
@@ -84,4 +96,6 @@ Services/        Business logic (recipes, ingredients, grocery list, import/expo
 Pages/           Blazor pages (recipe list, form, detail, ingredients, search, grocery list, import/export)
 Shared/          Layout and navigation components
 wwwroot/         Static assets (CSS, Bootstrap)
+tests/           xUnit test project (unit, SQLite data, and integration tests)
+.github/         CI, CodeQL, and Dependabot configuration
 ```
