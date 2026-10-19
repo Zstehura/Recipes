@@ -63,39 +63,15 @@ app.MapGet("/api/recipe/{id}/image", async (int id, RecipeService recipeService)
 
 app.MapFallbackToPage("/_Host");
 
-// Ensure database is created and apply manual migrations for new columns
+// Create the database on first run, or upgrade one created by an older version
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<RecipeDbContext>();
-    context.Database.EnsureCreated();
-
-    // Add Modifier column to RecipeIngredients if it doesn't exist (for existing databases)
-    var connection = context.Database.GetDbConnection();
-    await connection.OpenAsync();
-    using var command = connection.CreateCommand();
-    command.CommandText = "PRAGMA table_info(RecipeIngredients)";
-    var hasModifier = false;
-    using (var reader = await command.ExecuteReaderAsync())
-    {
-        while (await reader.ReadAsync())
-        {
-            if (reader.GetString(1) == "Modifier")
-            {
-                hasModifier = true;
-                break;
-            }
-        }
-    }
-    if (!hasModifier)
-    {
-        using var alterCommand = connection.CreateCommand();
-        alterCommand.CommandText = "ALTER TABLE RecipeIngredients ADD COLUMN Modifier TEXT";
-        await alterCommand.ExecuteNonQueryAsync();
-    }
+    var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(DatabaseInitializer));
+    await DatabaseInitializer.InitializeAsync(context, logger);
 }
 
 app.Run();
-
 
 // Makes the compiler-generated Program class public so integration tests can use
 // WebApplicationFactory<Program>.

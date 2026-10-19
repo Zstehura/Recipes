@@ -174,10 +174,9 @@ public class RecipeImportExportServiceTests
     }
 
     [Fact]
-    public void ParseRecipeText_DuplicateIngredientLines_KeepsBothEntries()
+    public void ParseRecipeText_SameIngredientOnTwoLines_KeepsBothEntries()
     {
-        // Documents current behavior. The XML docs claim duplicates are merged, but the parser
-        // keeps both; saving such a recipe then fails (see RecipeServiceTests, bug #1).
+        // Each line is its own entry; a recipe may list the same ingredient more than once.
         var (recipes, _) = _service.ParseRecipeText(
             RecipeTextBuilder.Build(ingredients: new[] { "100g flour", "50g flour" }));
 

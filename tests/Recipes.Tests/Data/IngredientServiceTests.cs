@@ -63,6 +63,20 @@ public sealed class IngredientServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetIngredientUsageCountAsync_IngredientTwiceInOneRecipe_CountsRecipeOnce()
+    {
+        _db.SeedRecipe("Salad", new[]
+        {
+            ("Tomato", (decimal?)2m, (string?)"pieces", (string?)"sliced"),
+            ("Tomato", (decimal?)1m, (string?)"pieces", (string?)"diced"),
+        });
+
+        var count = await CreateService().GetIngredientUsageCountAsync(await IdOf("Tomato"));
+
+        count.ShouldBe(1);
+    }
+
+    [Fact]
     public async Task GetRecipesUsingIngredientAsync_ReturnsOnlyRecipesWithIngredient()
     {
         _db.SeedRecipe("Bread", "Flour");
@@ -187,28 +201,44 @@ public sealed class IngredientServiceTests : IDisposable
         (await context.Ingredients.Select(i => i.Name).ToListAsync()).ShouldBe(new[] { "Flour" });
     }
 
-    [Fact]
-    public async Task MergeIngredientsAsync_RecipeHasBothIngredients_KeepsTargetEntryOnly()
+    [Theory]
+    [InlineData(500, "g", null, 200, "ml", null)]          // different units
+    [InlineData(500, "g", "sifted", 200, "g", null)]       // different modifiers
+    public async Task MergeIngredientsAsync_RecipeHasBothButLinesDiffer_KeepsBothLines(
+        double targetQuantity, string targetUnit, string? targetModifier,
+        double sourceQuantity, string sourceUnit, string? sourceModifier)
     {
-        // Documents current behavior: the source line is dropped, not combined (see bug #2 below).
         var recipeId = _db.SeedRecipe("Bread", new[]
         {
-            ("Flour", (decimal?)500m, (string?)"g", (string?)null),
-            ("Plain flour", (decimal?)200m, (string?)"g", (string?)null),
+            ("Flour", (decimal?)targetQuantity, (string?)targetUnit, targetModifier),
+            ("Plain flour", (decimal?)sourceQuantity, (string?)sourceUnit, sourceModifier),
         });
         var targetId = await IdOf("Flour");
-        var sourceId = await IdOf("Plain flour");
 
-        var result = await CreateService().MergeIngredientsAsync(targetId, sourceId);
+        await CreateService().MergeIngredientsAsync(targetId, await IdOf("Plain flour"));
 
-        result.ShouldBeTrue();
         using var context = _db.CreateContext();
-        var link = await context.RecipeIngredients.SingleAsync(ri => ri.RecipeId == recipeId);
-        link.IngredientId.ShouldBe(targetId);
-        link.Quantity.ShouldBe(500m);
+        var lines = await context.RecipeIngredients.Where(ri => ri.RecipeId == recipeId).ToListAsync();
+        lines.ShouldAllBe(ri => ri.IngredientId == targetId);
+        lines.Select(ri => ri.Quantity).ShouldBe(new decimal?[] { (decimal)targetQuantity, (decimal)sourceQuantity }, ignoreOrder: true);
     }
 
-    [Fact(Skip = "Bug #2: merging drops the source quantity when the recipe already has the target")]
+    [Fact]
+    public async Task MergeIngredientsAsync_SameLineWithoutQuantities_StaysWithoutQuantity()
+    {
+        var recipeId = _db.SeedRecipe("Soup", new[]
+        {
+            ("Salt", (decimal?)null, (string?)null, (string?)null),
+            ("Sea salt", (decimal?)null, (string?)null, (string?)null),
+        });
+
+        await CreateService().MergeIngredientsAsync(await IdOf("Salt"), await IdOf("Sea salt"));
+
+        using var context = _db.CreateContext();
+        (await context.RecipeIngredients.SingleAsync(ri => ri.RecipeId == recipeId)).Quantity.ShouldBeNull();
+    }
+
+    [Fact]
     public async Task MergeIngredientsAsync_RecipeHasBothIngredientsInSameUnit_CombinesQuantities()
     {
         var recipeId = _db.SeedRecipe("Bread", new[]

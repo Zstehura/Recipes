@@ -82,86 +82,64 @@ public class IngredientService
         return true;
     }
 
+    /// <summary>
+    /// Merges the source ingredient into the target: every recipe line that used the source
+    /// now uses the target, and the source ingredient is deleted. If a recipe already has a
+    /// target line with the same unit and modifier, the quantities are added together;
+    /// otherwise the line is kept as its own entry, so no quantity is lost.
+    /// </summary>
     public async Task<bool> MergeIngredientsAsync(int targetId, int sourceId)
     {
         if (targetId == sourceId)
             return false;
 
-        var targetIngredient = await _context.Ingredients
-            .FirstOrDefaultAsync(i => i.Id == targetId);
-
-        var sourceIngredient = await _context.Ingredients
-            .FirstOrDefaultAsync(i => i.Id == sourceId);
-
-        if (targetIngredient == null || sourceIngredient == null)
+        var target = await _context.Ingredients.FirstOrDefaultAsync(i => i.Id == targetId);
+        var source = await _context.Ingredients.FirstOrDefaultAsync(i => i.Id == sourceId);
+        if (target == null || source == null)
             return false;
 
-        // Get all recipe ingredients that use the source ingredient
-        var sourceRecipeIngredients = await _context.RecipeIngredients
+        var sourceLines = await _context.RecipeIngredients
             .Where(ri => ri.IngredientId == sourceId)
             .ToListAsync();
+        var affectedRecipeIds = sourceLines.Select(ri => ri.RecipeId).Distinct().ToList();
+        var targetLines = await _context.RecipeIngredients
+            .Where(ri => ri.IngredientId == targetId && affectedRecipeIds.Contains(ri.RecipeId))
+            .ToListAsync();
 
-        // Update all recipe ingredients to use the target ingredient
-        foreach (var recipeIngredient in sourceRecipeIngredients)
+        // Both saves succeed or neither does
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+
+        foreach (var line in sourceLines)
         {
-            // Check if the recipe already has the target ingredient
-            var existingRecipeIngredient = await _context.RecipeIngredients
-                .FirstOrDefaultAsync(ri => ri.RecipeId == recipeIngredient.RecipeId &&
-                                          ri.IngredientId == targetId);
+            var sameLine = targetLines.FirstOrDefault(t =>
+                t.RecipeId == line.RecipeId &&
+                t.Unit == line.Unit &&
+                string.Equals(t.Modifier ?? "", line.Modifier ?? "", StringComparison.OrdinalIgnoreCase));
 
-            if (existingRecipeIngredient != null)
+            if (sameLine != null)
             {
-                // If the recipe already has the target ingredient, remove the source ingredient entry
-                _context.RecipeIngredients.Remove(recipeIngredient);
+                sameLine.Quantity = AddQuantities(sameLine.Quantity, line.Quantity);
+                _context.RecipeIngredients.Remove(line);
             }
             else
             {
-                // Since RecipeIngredient has a composite key, we need to remove the old one
-                // and create a new one with the target ingredient
-                var newRecipeIngredient = new RecipeIngredient
-                {
-                    RecipeId = recipeIngredient.RecipeId,
-                    IngredientId = targetId,
-                    Quantity = recipeIngredient.Quantity,
-                    Unit = recipeIngredient.Unit,
-                    Modifier = recipeIngredient.Modifier
-                };
-
-                // Remove the old recipe ingredient
-                _context.RecipeIngredients.Remove(recipeIngredient);
-
-                // Add the new recipe ingredient
-                _context.RecipeIngredients.Add(newRecipeIngredient);
+                line.IngredientId = targetId;
             }
         }
 
-        // Save changes to update all RecipeIngredients first
+        // Save the re-pointed lines before deleting the source, so the cascade delete on
+        // the source ingredient can't remove lines that now belong to the target.
         await _context.SaveChangesAsync();
 
-        // Verify no RecipeIngredients still reference the source ingredient
-        var remainingRecipeIngredients = await _context.RecipeIngredients
-            .AnyAsync(ri => ri.IngredientId == sourceId);
+        _context.Ingredients.Remove(source);
+        await _context.SaveChangesAsync();
 
-        if (remainingRecipeIngredients)
-        {
-            // If there are still references, something went wrong
-            return false;
-        }
-
-        // Reload the source ingredient without navigation properties to avoid tracking issues
-        _context.Entry(sourceIngredient).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
-        var ingredientToRemove = await _context.Ingredients
-            .FirstOrDefaultAsync(i => i.Id == sourceId);
-
-        if (ingredientToRemove != null)
-        {
-            // Remove the source ingredient
-            _context.Ingredients.Remove(ingredientToRemove);
-            await _context.SaveChangesAsync();
-        }
-
+        await transaction.CommitAsync();
         return true;
     }
+
+    private static decimal? AddQuantities(decimal? a, decimal? b) =>
+        a.HasValue || b.HasValue ? (a ?? 0) + (b ?? 0) : null;
 
     public async Task<bool> DeleteIngredientAsync(int id)
     {
@@ -178,8 +156,11 @@ public class IngredientService
 
     public async Task<int> GetIngredientUsageCountAsync(int id)
     {
+        // Count recipes, not lines: a recipe can list the same ingredient more than once
         return await _context.RecipeIngredients
             .Where(ri => ri.IngredientId == id)
+            .Select(ri => ri.RecipeId)
+            .Distinct()
             .CountAsync();
     }
 

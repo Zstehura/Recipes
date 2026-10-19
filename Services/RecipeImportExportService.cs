@@ -139,7 +139,7 @@ public class RecipeImportExportService
     /// <para>Spaces between quantity and unit are optional.</para>
     /// <para>If no unit is specified, the ingredient defaults to "pieces" (e.g., "2 eggs" becomes "2 pieces eggs").</para>
     /// <para>Fractions are supported: "3/4 cup sugar" or "1 1/2 tsp vanilla" will be converted to decimals (0.75, 1.5).</para>
-    /// <para>Ingredient names are case-insensitive; duplicate ingredients will be merged automatically.</para>
+    /// <para>Ingredient names are case-insensitive. Each line is its own entry, so the same ingredient can appear more than once (e.g. with different modifiers).</para>
     /// <para>If an ingredient line doesn't match any format, it will be treated as just an ingredient name.</para>
     ///
     /// <para><b>Supported Units:</b></para>

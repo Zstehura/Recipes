@@ -150,7 +150,7 @@ public sealed class RecipeServiceTests : IDisposable
         saved.ModifiedDate.ShouldBeGreaterThanOrEqualTo(before);
     }
 
-    [Fact(Skip = "Bug #1: the (RecipeId, IngredientId) key allows each ingredient only once per recipe")]
+    [Fact]
     public async Task AddRecipeAsync_SameIngredientWithDifferentModifiers_SavesBoth()
     {
         var recipe = await CreateService().AddRecipeAsync(NewRecipe(), new List<IngredientEntry>
@@ -160,6 +160,39 @@ public sealed class RecipeServiceTests : IDisposable
         });
 
         (await LoadRecipe(recipe.Id)).RecipeIngredients.Select(ri => ri.Modifier)
+            .ShouldBe(new[] { "sliced", "diced" }, ignoreOrder: true);
+    }
+
+    [Fact]
+    public async Task AddRecipeAsync_SameNewIngredientTwice_CreatesOneIngredientAndTwoLines()
+    {
+        var recipe = await CreateService().AddRecipeAsync(NewRecipe(), new List<IngredientEntry>
+        {
+            Entry("Butter", 50, MeasurementUnit.Grams),
+            Entry("butter", 25, MeasurementUnit.Grams, "melted"),
+        });
+
+        var saved = await LoadRecipe(recipe.Id);
+        saved.RecipeIngredients.Count.ShouldBe(2);
+        saved.RecipeIngredients.Select(ri => ri.IngredientId).Distinct().ShouldHaveSingleItem();
+        using var context = _db.CreateContext();
+        (await context.Ingredients.CountAsync()).ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task UpdateRecipeAsync_SameIngredientTwice_SavesBothLines()
+    {
+        var id = _db.SeedRecipe("Salad", "Tomato");
+        var input = NewRecipe("Salad");
+        input.Id = id;
+
+        await CreateService().UpdateRecipeAsync(input, new List<IngredientEntry>
+        {
+            Entry("Tomato", 2, MeasurementUnit.Pieces, "sliced"),
+            Entry("Tomato", 1, MeasurementUnit.Pieces, "diced"),
+        });
+
+        (await LoadRecipe(id)).RecipeIngredients.Select(ri => ri.Modifier)
             .ShouldBe(new[] { "sliced", "diced" }, ignoreOrder: true);
     }
 

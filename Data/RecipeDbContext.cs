@@ -45,7 +45,7 @@ public class RecipeDbContext : DbContext
         // Configure RecipeIngredient join table
         modelBuilder.Entity<RecipeIngredient>(entity =>
         {
-            entity.HasKey(e => new { e.RecipeId, e.IngredientId });
+            entity.HasKey(e => e.Id);
 
             entity.HasOne(e => e.Recipe)
                 .WithMany(r => r.RecipeIngredients)

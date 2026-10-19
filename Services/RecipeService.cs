@@ -237,9 +237,13 @@ public class RecipeService : IRecipeReader
 
             var normalizedName = IngredientService.NormalizeName(entry.Name);
 
-            // Find or create ingredient
-            var ingredient = await _context.Ingredients
-                .FirstOrDefaultAsync(i => i.Name.ToLower() == normalizedName.ToLower());
+            // Find or create ingredient. Check entities added earlier in this same save first
+            // (Local), since a recipe can list the same new ingredient twice and the database
+            // doesn't contain it yet.
+            var ingredient = _context.Ingredients.Local
+                                 .FirstOrDefault(i => string.Equals(i.Name, normalizedName, StringComparison.OrdinalIgnoreCase))
+                             ?? await _context.Ingredients
+                                 .FirstOrDefaultAsync(i => i.Name.ToLower() == normalizedName.ToLower());
 
             if (ingredient == null)
             {

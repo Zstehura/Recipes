@@ -78,8 +78,13 @@ public sealed class SqliteTestDatabase : IDisposable
 
         foreach (var (ingredientName, quantity, unit, modifier) in ingredients ?? [])
         {
-            var ingredient = context.Ingredients.FirstOrDefault(i => i.Name == ingredientName)
-                             ?? new Ingredient { Name = ingredientName };
+            var ingredient = context.Ingredients.Local.FirstOrDefault(i => i.Name == ingredientName)
+                             ?? context.Ingredients.FirstOrDefault(i => i.Name == ingredientName);
+            if (ingredient == null)
+            {
+                ingredient = new Ingredient { Name = ingredientName };
+                context.Ingredients.Add(ingredient);
+            }
             recipe.RecipeIngredients.Add(new RecipeIngredient
             {
                 Ingredient = ingredient,
