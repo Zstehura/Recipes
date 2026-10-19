@@ -409,7 +409,7 @@ public sealed class RecipeServiceTests : IDisposable
         Names(results).ShouldBe(Csv(expected));
     }
 
-    [Fact(Skip = "Bug #3: tags saved with a space after the comma ('Italian, Dinner') don't match the tag filter")]
+    [Fact]
     public async Task FilterRecipesAsync_TagsWithSpaceAfterComma_MatchesTag()
     {
         _db.SeedRecipe("Spaghetti", tags: "Italian, Dinner");

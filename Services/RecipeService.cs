@@ -145,9 +145,7 @@ public class RecipeService : IRecipeReader
             .ToListAsync();
 
         var uniqueTags = allTags
-            .SelectMany(t => t.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            .Select(t => t.Trim())
-            .Where(t => !string.IsNullOrWhiteSpace(t))
+            .SelectMany(RecipeTags.Parse)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(t => t)
             .ToList();
@@ -213,22 +211,21 @@ public class RecipeService : IRecipeReader
             query = query.Where(r => r.Servings <= maxServings.Value);
         }
 
-        // Apply tag filters (matches if recipe contains any of the selected tags)
-        if (tags != null && tags.Any())
-        {
-            var lowerTags = tags.Select(t => t.ToLower().Trim()).ToList();
-            query = query.Where(r => !string.IsNullOrWhiteSpace(r.Tags) &&
-                lowerTags.Any(tag =>
-                    r.Tags.ToLower().Contains("," + tag + ",") ||
-                    r.Tags.ToLower().StartsWith(tag + ",") ||
-                    r.Tags.ToLower().EndsWith("," + tag) ||
-                    r.Tags.ToLower() == tag));
-        }
-
-        return await query
+        var recipes = await query
             .Select(WithoutImageData)
             .OrderByDescending(r => r.ModifiedDate)
             .ToListAsync();
+
+        // Tag filter (matches if the recipe has any of the selected tags). Tags are one
+        // comma-separated column, so they are matched in memory, after the database has
+        // applied the other filters. Fine for a personal collection; a large catalog would
+        // store tags in their own table instead.
+        if (tags != null && tags.Any())
+        {
+            recipes = recipes.Where(r => RecipeTags.ContainsAny(r.Tags, tags)).ToList();
+        }
+
+        return recipes;
     }
 
     private async Task ProcessIngredientsAsync(Recipe recipe, List<IngredientEntry> ingredientEntries)
