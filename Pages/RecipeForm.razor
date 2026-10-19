@@ -6,6 +6,7 @@
 @using Microsoft.AspNetCore.Components.Forms
 @inject RecipeService RecipeService
 @inject NavigationManager Navigation
+@inject ILogger<RecipeForm> Logger
 
 <PageTitle>@(recipe.Id > 0 ? "Edit Recipe" : "New Recipe")</PageTitle>
 
@@ -25,8 +26,8 @@
 
             <div class="mb-3">
                 <label class="form-label" for="image">Background Image (Optional)</label>
-                <InputFile id="image" class="form-control" OnChange="HandleImageUpload" accept="image/*" />
-                <small class="form-text text-muted">Maximum size: 10MB. Supported formats: JPEG, PNG, GIF</small>
+                <InputFile id="image" class="form-control" OnChange="HandleImageUpload" accept="image/jpeg,image/png,image/gif,image/webp" />
+                <small class="form-text text-muted">Maximum size: 10MB. Supported formats: @ImageValidator.SupportedFormatsDescription</small>
                 @if (!string.IsNullOrEmpty(imageError))
                 {
                     <div class="text-danger small mt-1">@imageError</div>
@@ -130,6 +131,11 @@
                 <small class="form-text text-muted">Any additional notes or tips about this recipe</small>
             </div>
 
+            @if (!string.IsNullOrEmpty(saveError))
+            {
+                <div class="alert alert-danger" role="alert">@saveError</div>
+            }
+
             <div class="mb-3">
                 <button type="submit" class="btn btn-primary me-2">Save Recipe</button>
                 <a href="/" class="btn btn-secondary">Cancel</a>
@@ -145,6 +151,7 @@
     private Recipe recipe = new();
     private List<IngredientEntry> ingredientEntries = new();
     private string imageError = string.Empty;
+    private string saveError = string.Empty;
     private bool imageRemoved = false;
 
     protected override async Task OnInitializedAsync()
@@ -200,37 +207,42 @@
     {
         imageError = string.Empty;
         imageRemoved = false; // Reset removal flag when new image is uploaded
-        
+
         var file = e.File;
-        
-        // Validate file size
-        if (file.Size > RecipeService.MaxImageSizeBytes)
+
+        // Reject oversized files before reading them
+        if (file.Size > ImageValidator.MaxImageSizeBytes)
         {
-            imageError = $"File size exceeds the maximum limit of {RecipeService.MaxImageSizeBytes / (1024 * 1024)}MB";
+            imageError = $"File size exceeds the maximum limit of {ImageValidator.MaxImageSizeBytes / (1024 * 1024)}MB";
             return;
         }
 
-        // Validate content type
-        if (!file.ContentType.StartsWith("image/"))
-        {
-            imageError = "Please select an image file (JPEG, PNG, GIF, etc.)";
-            return;
-        }
-
+        byte[] imageData;
         try
         {
-            // Read file into byte array
-            using var stream = file.OpenReadStream(maxAllowedSize: RecipeService.MaxImageSizeBytes);
+            // maxAllowedSize is enforced on the server while streaming, whatever the browser claims
+            using var stream = file.OpenReadStream(maxAllowedSize: ImageValidator.MaxImageSizeBytes);
             using var memoryStream = new MemoryStream();
             await stream.CopyToAsync(memoryStream);
-            
-            recipe.ImageData = memoryStream.ToArray();
-            recipe.ImageContentType = file.ContentType;
+            imageData = memoryStream.ToArray();
         }
         catch (Exception ex)
         {
-            imageError = $"Error uploading image: {ex.Message}";
+            Logger.LogWarning(ex, "Failed to read uploaded image ({SizeBytes} bytes)", file.Size);
+            imageError = "The image couldn't be uploaded. Please try again.";
+            return;
         }
+
+        // Check the actual bytes; the file name and browser-reported type can't be trusted
+        var validation = ImageValidator.Validate(imageData);
+        if (!validation.IsValid)
+        {
+            imageError = validation.ErrorMessage!;
+            return;
+        }
+
+        recipe.ImageData = imageData;
+        recipe.ImageContentType = validation.ContentType;
     }
 
     private void RemoveImage()
@@ -243,6 +255,8 @@
 
     private async Task HandleValidSubmit()
     {
+        saveError = string.Empty;
+
         // Validate that at least one ingredient has a name
         var validIngredients = ingredientEntries
             .Where(e => !string.IsNullOrWhiteSpace(e.Name))
@@ -250,6 +264,7 @@
 
         if (validIngredients.Count == 0)
         {
+            saveError = "Add at least one ingredient.";
             return;
         }
 
@@ -260,14 +275,31 @@
             recipe.ImageContentType = null;
         }
 
-        if (recipe.Id > 0)
+        try
         {
-            await RecipeService.UpdateRecipeAsync(recipe, validIngredients, imageRemoved);
+            if (recipe.Id > 0)
+            {
+                await RecipeService.UpdateRecipeAsync(recipe, validIngredients, imageRemoved);
+            }
+            else
+            {
+                await RecipeService.AddRecipeAsync(recipe, validIngredients);
+            }
         }
-        else
+        catch (ValidationException ex)
         {
-            await RecipeService.AddRecipeAsync(recipe, validIngredients);
+            // Validation messages are written for users, so they're safe to show as-is
+            saveError = ex.Message;
+            return;
         }
+        catch (Exception ex)
+        {
+            // Anything else is unexpected: log the details, show a generic message
+            Logger.LogError(ex, "Failed to save recipe {RecipeId}", recipe.Id);
+            saveError = "The recipe couldn't be saved. Please try again.";
+            return;
+        }
+
         Navigation.NavigateTo("/");
     }
 }

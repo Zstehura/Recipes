@@ -1,4 +1,6 @@
+using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
+using Recipes.Tests.TestData;
 using RecipesApp.Models;
 using RecipesApp.Services;
 using Shouldly;
@@ -314,13 +316,13 @@ public sealed class RecipeServiceTests : IDisposable
         var id = _db.SeedRecipe("Bread", image: new byte[] { 1, 2, 3 });
         var input = NewRecipe();
         input.Id = id;
-        input.ImageData = new byte[] { 9, 9 };
-        input.ImageContentType = "image/jpeg";
+        input.ImageData = TestImages.Jpeg;
+        input.ImageContentType = "text/html";   // whatever the caller claims is ignored
 
         await CreateService().UpdateRecipeAsync(input, new List<IngredientEntry>());
 
         var saved = await LoadRecipe(id);
-        saved.ImageData.ShouldBe(new byte[] { 9, 9 });
+        saved.ImageData.ShouldBe(TestImages.Jpeg);
         saved.ImageContentType.ShouldBe("image/jpeg");
     }
 
@@ -336,6 +338,46 @@ public sealed class RecipeServiceTests : IDisposable
         var saved = await LoadRecipe(id);
         saved.ImageData.ShouldBeNull();
         saved.ImageContentType.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task AddRecipeAsync_ValidImage_StoresContentTypeDetectedFromBytes()
+    {
+        var input = NewRecipe();
+        input.ImageData = TestImages.Png;
+        input.ImageContentType = "image/svg+xml";
+
+        var recipe = await CreateService().AddRecipeAsync(input, new List<IngredientEntry>());
+
+        (await LoadRecipe(recipe.Id)).ImageContentType.ShouldBe("image/png");
+    }
+
+    [Fact]
+    public async Task AddRecipeAsync_SvgImage_ThrowsAndSavesNothing()
+    {
+        var input = NewRecipe();
+        input.ImageData = TestImages.Svg;
+        input.ImageContentType = "image/svg+xml";
+
+        await Should.ThrowAsync<ValidationException>(() => CreateService().AddRecipeAsync(input, new List<IngredientEntry>()));
+
+        using var context = _db.CreateContext();
+        (await context.Recipes.AnyAsync()).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task UpdateRecipeAsync_InvalidNewImage_ThrowsAndKeepsExistingImage()
+    {
+        var id = _db.SeedRecipe("Bread", image: TestImages.Png);
+        var input = NewRecipe();
+        input.Id = id;
+        input.ImageData = TestImages.Html;
+
+        await Should.ThrowAsync<ValidationException>(() => CreateService().UpdateRecipeAsync(input, new List<IngredientEntry>()));
+
+        var saved = await LoadRecipe(id);
+        saved.ImageData.ShouldBe(TestImages.Png);
+        saved.Name.ShouldBe("Bread");
     }
 
     // ---------------------------------------------------------------- Delete

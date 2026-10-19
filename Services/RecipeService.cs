@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using RecipesApp.Data;
@@ -54,6 +55,8 @@ public class RecipeService : IRecipeReader
 
     public async Task<Recipe> AddRecipeAsync(Recipe recipe, List<IngredientEntry> ingredientEntries)
     {
+        ValidateImage(recipe);
+
         recipe.CreatedDate = DateTime.Now;
         recipe.ModifiedDate = DateTime.Now;
 
@@ -70,6 +73,11 @@ public class RecipeService : IRecipeReader
 
     public async Task<Recipe?> UpdateRecipeAsync(Recipe recipe, List<IngredientEntry> ingredientEntries, bool removeImage = false)
     {
+        if (!removeImage)
+        {
+            ValidateImage(recipe);
+        }
+
         var existingRecipe = await _context.Recipes
             .Include(r => r.RecipeIngredients)
                 .ThenInclude(ri => ri.Ingredient)
@@ -281,6 +289,27 @@ public class RecipeService : IRecipeReader
         }
     }
 
+    /// <summary>
+    /// Defense in depth: the form validates uploads too, but this is the last stop before the
+    /// database, so check the bytes again and set the content type from them rather than
+    /// trusting whatever the caller passed.
+    /// </summary>
+    /// <exception cref="ValidationException">The image isn't an allowed format or is too large.</exception>
+    private static void ValidateImage(Recipe recipe)
+    {
+        if (recipe.ImageData == null)
+        {
+            recipe.ImageContentType = null;
+            return;
+        }
+
+        var result = ImageValidator.Validate(recipe.ImageData);
+        if (!result.IsValid)
+            throw new ValidationException(result.ErrorMessage);
+
+        recipe.ImageContentType = result.ContentType;
+    }
+
     // Get image data separately for performance
     public async Task<(byte[]? imageData, string? contentType)> GetRecipeImageAsync(int recipeId)
     {
@@ -300,8 +329,5 @@ public class RecipeService : IRecipeReader
             .Select(r => r.ImageData != null)
             .FirstOrDefaultAsync();
     }
-
-    // Maximum image size: 10MB
-    public const int MaxImageSizeBytes = 10 * 1024 * 1024;
 }
 
