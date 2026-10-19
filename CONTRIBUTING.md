@@ -76,6 +76,16 @@ Every push and pull request to `main` runs [.github/workflows/ci.yml](.github/wo
 - **Validation:** field rules live as data annotations on the models and are enforced in `RecipeService` through `RecipeValidator`, so every save path is covered. Pages may check earlier for a better experience, but must not be the only check. Throw `ValidationException` with a message written for users.
 - **Uploads:** validate content with `ImageValidator` (file signatures against an allow-list). Never trust the file name or the browser-reported content type.
 
+### Drafts (unsaved page state)
+
+Pages where the user puts in real effort should keep it as a draft (see `Services/Drafts`):
+
+- Restore in `OnAfterRenderAsync(firstRender)`, not `OnInitializedAsync`. Browser storage needs JavaScript interop, which isn't available during prerendering.
+- Use `DraftAutosave<T>`: call `Start(baseline)` after restoring, then `SaveIfChangedAsync(state)` after each render. Clear the draft when the work is saved or deliberately abandoned.
+- Use `DraftLifetime.Device` for work (forms, lists) and `DraftLifetime.Tab` for view state (filters).
+- Keep draft types small and JSON-serializable; never put large data (such as images) in them. If a draft's shape changes incompatibly, bump `DraftService.FormatVersion`.
+- Test the page with bUnit using `ComponentTestBase`, which supplies an in-memory draft store.
+
 ### Errors and logging
 
 - Catch specific exceptions. Show users only messages written for them (such as `ValidationException` messages); log anything unexpected with `ILogger` and show a generic message.

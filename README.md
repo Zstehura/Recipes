@@ -28,6 +28,7 @@ A self-hosted recipe manager built with .NET 10, Blazor Server, and SQLite. Stor
 - **Search by available ingredients:** find the recipes that use everything you've selected
 - **Grocery list:** pick recipes, set how many batches of each, and get one combined list. Quantities are added up across recipes and shown in readable units (for example 1.2 kg rather than 1200 g)
 - **Import and export:** move recipes in and out as a plain-text format (see [Import format](#import-format))
+- **Unsaved work survives:** a half-written recipe, the grocery list, and search filters come back after switching apps on a phone, a lost connection, a page reload, or a server restart
 
 ## Screenshots
 
@@ -153,6 +154,7 @@ Services/        Business logic:
                    UnitConversionService                   unit conversion to and from base units
                    RecipeValidator, ImageValidator         server-side validation
                    RecipeTags, IngredientEntryMapper       small shared helpers
+Services/Drafts/ Unsaved page state kept in encrypted browser storage (DraftService, IDraftStore)
 Pages/           Blazor pages, plus the error page
 Shared/          Layout and navigation
 wwwroot/         Static assets (CSS, Bootstrap)
@@ -174,6 +176,7 @@ The suite has over 300 tests and runs in about a second. CI runs it on every pus
 |---|---|---|---|
 | Unit | `tests/Recipes.Tests/Unit` | Pure logic: unit conversion, import/export parsing, grocery list totals, validation, tag parsing | Plain inputs and outputs, mostly data-driven (`[Theory]`). No database |
 | Data | `tests/Recipes.Tests/Data` | `RecipeService`, `IngredientService`, and the database upgrade | A real SQLite database in memory, created fresh for each test |
+| Component | `tests/Recipes.Tests/Components` | Pages saving, restoring, and clearing drafts (recipe form, grocery list, search filters) | bUnit renders the real pages against the SQLite test database, with an in-memory draft store in place of browser storage |
 | Integration | `tests/Recipes.Tests/Integration` | The image endpoint, security headers, and the production error page | The full ASP.NET Core pipeline in memory via `WebApplicationFactory`, with a temporary database file |
 
 Principles:
@@ -192,13 +195,13 @@ Covered (about 95–100% line coverage per service):
 - The image endpoint, the security headers, and the error page
 
 Not covered by automated tests:
-- **Razor pages and UI behavior.** Pages are thin and delegate to services, but their markup and event handling are untested. bUnit component tests are planned as the UI is reworked.
-- **Browser-only behavior,** such as copying to the clipboard and downloading files (JavaScript interop).
+- **Most page markup and event handling.** Pages are thin and delegate to services. bUnit tests cover the draft behavior of the pages that have it; the rest of the UI isn't component-tested yet.
+- **Browser-only behavior,** such as copying to the clipboard, downloading files, and the small scripts in `wwwroot/js` (committing a field when a phone hides the page, the reconnect banner). The end-to-end behavior was checked in headless Chrome against the real image: frozen page and network cut for 1 and 4 minutes, a server restart, and a reload.
 - **The running container, beyond a smoke test.** CI starts the built image and checks that the page, the Blazor script, and the stylesheet load and that it runs as the non-root user, but doesn't exercise the UI in a browser.
 
 ## Design decisions
 
-**Blazor Server.** The whole app, UI included, is written in C#, with no separate front-end build and no API layer to maintain. For a single-household app on a home network, the main cost of Blazor Server, which is one open connection and some server memory per browser tab, doesn't matter. The trade-off is that the UI depends on that connection: if it drops, as happens when a phone suspends a background tab, in-progress page state can be lost. That's a known issue being worked on.
+**Blazor Server.** The whole app, UI included, is written in C#, with no separate front-end build and no API layer to maintain. For a single-household app on a home network, the main cost of Blazor Server, which is one open connection and some server memory per browser tab, doesn't matter. The trade-off is that page state lives in server memory and the UI depends on that connection, which phones drop whenever they suspend a background tab. Drafts handle that (next decision).
 
 **SQLite.** One file, no database server to run or secure, and a backup is a file copy. SQLite allows only one writer at a time, which is no constraint for a few users.
 
@@ -212,6 +215,14 @@ Not covered by automated tests:
 
 **Images stored in the database.** Photos are BLOBs in SQLite, so the database file is a complete backup with nothing else to keep in sync, and no user-supplied file names ever reach the file system. List and detail queries exclude the image bytes, and images are served separately by recipe ID.
 
+**Unsaved work: browser drafts, plus longer circuit retention.** Reproducing the "lost work when I switch apps" bug showed the cause: Blazor Server keeps a disconnected tab's state (its circuit) for only 3 minutes by default, then deletes it. The fix has two layers:
+- *Drafts.* Pages with valuable input (recipe form, grocery list) save it after every change to the browser's local storage; search filters go to session storage, so they last only for the tab. Values are encrypted and signed with ASP.NET Core's data protection keys, which are now kept with the database so drafts stay readable after an update. Drafts expire after 7 days, are cleared on save or cancel, and anything corrupt or out of date is quietly discarded. An edit draft is dropped if the recipe was saved since. The logic sits behind `IDraftStore`, so it's unit-tested without a browser.
+- *Longer retention.* Disconnected circuits are kept for 30 minutes instead of 3, so short absences reconnect seamlessly. Each retained circuit holds one tab's page state in server memory, a negligible cost at household scale (capped at 100 circuits).
+
+Alternatives considered:
+- **Blazor WebAssembly or Auto mode** would keep state in the browser and avoid the connection problem entirely, but it means adding an authenticated HTTP API for every operation, downloading the .NET runtime to the phone, and rewriting data access. It's a much larger change, and it still wouldn't survive the phone discarding the tab without the same kind of browser storage. Not worth it for this app.
+- **.NET 10's built-in circuit state persistence** (`[PersistentState]`) restores state after the server evicts a circuit, but not after a reload, a tab discard, or a server restart. Drafts cover all of those with one mechanism. Restoring drafts when a page initializes also covers .NET 10's automatic circuit resume, so the app doesn't need both.
+
 **Tags as a comma-separated column.** This keeps the schema small. Tag filtering is done in memory after the database applies the other filters, which is fine for a personal collection. A large catalog would use a separate tags table.
 
 ## Security
@@ -221,6 +232,7 @@ Not covered by automated tests:
 - **Bounded import parsing:** imports are limited to 1 MB and ingredient lines to 500 characters, and every parser regex has a timeout. This closes a measured regular-expression denial-of-service risk.
 - **Errors and logging:** users see friendly messages, not exception details. Unexpected errors are logged with structured logging (`ILogger`), and logs record IDs and counts, never recipe content. In production, unhandled errors show a generic page with a reference ID.
 - **Response headers:** `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, and `Referrer-Policy: no-referrer`.
+- **Data protection keys:** stored in `data/keys` next to the database, readable only by the container's user. They encrypt drafts and Blazor's circuit IDs. On Linux they aren't encrypted at rest, so protect the data folder the same way as the database.
 - **Container:** multi-stage build, a chiseled runtime image with no shell or package manager, a non-root user, and app files that the app user can read but not modify.
 - **Supply chain:** GitHub Actions are pinned to commit SHAs with least-privilege permissions, CodeQL scans the code and workflows, and Dependabot keeps NuGet packages, actions, and base images up to date.
 
@@ -229,8 +241,9 @@ Not covered by automated tests:
 - **No authentication.** Anyone who can reach the app can view, change, or delete every recipe. It's designed for a single household on a trusted home network. Don't expose it to the internet without putting authentication in front of it (for example a reverse proxy with login).
 - **Single-user design.** There are no user accounts or per-user data, and simultaneous edits to the same recipe aren't detected (the last save wins).
 - **No HTTPS inside the container.** The container serves plain HTTP on port 8080. Use a reverse proxy such as Caddy, nginx, or Traefik for HTTPS.
-- **In-progress work can be lost when the connection drops,** for example when switching apps on a phone. This is a consequence of Blazor Server keeping page state on the server, and a fix is planned.
-- **Open tabs must be reloaded after the container restarts.** Blazor keeps page state in server memory, and ASP.NET Core's data protection keys aren't persisted outside the container, so nothing from before the restart can be resumed.
+- **Drafts belong to one browser on one device.** They aren't synced, so a recipe started on a phone can't be finished on a laptop until it's saved.
+- **Photos aren't kept in drafts.** They can be up to 10 MB, too much for browser storage, so a photo has to be chosen again after a draft is restored. The notice says so.
+- **The last few keystrokes can be lost** if a phone suspends the page before the field being typed in has sent its value. Everything up to the previous field is kept.
 - **Large pasted imports may fail.** Blazor limits messages from the browser to 32 KB, so pasting more text than that into the import box is likely to disconnect the page. Use the file upload for large imports (up to 1 MB).
 - **Original units aren't kept** (see [Design decisions](#design-decisions)).
 - **No Content Security Policy yet.** Adding one requires, among other things, moving the import page's inline script into a static file.
