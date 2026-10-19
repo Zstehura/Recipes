@@ -3,6 +3,7 @@
 @using RecipesApp.Services
 @inject RecipeService RecipeService
 @inject IngredientService IngredientService
+@inject DraftService Drafts
 
 <PageTitle>Search by Ingredients</PageTitle>
 
@@ -304,10 +305,57 @@
     private List<string> availableTags = new();
     private HashSet<string> selectedTags = new();
 
+    private DraftAutosave<IngredientSearchDraft>? autosave;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadIngredients();
         await LoadAvailableTags();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await RestoreSearchAsync();
+            return;
+        }
+
+        if (autosave != null)
+        {
+            await autosave.SaveIfChangedAsync(CaptureSearch());
+        }
+    }
+
+    private IngredientSearchDraft CaptureSearch() => new(
+        selectedIngredientIds.Order().ToList(),
+        new RecipeFilters(searchTerm, showFilters, minCookTime, maxCookTime, minServings, maxServings, selectedTags.Order().ToList()));
+
+    // Kept for this browser tab only (survives a reload or a lost connection)
+    private async Task RestoreSearchAsync()
+    {
+        autosave = new DraftAutosave<IngredientSearchDraft>(Drafts, IngredientSearchDraft.Key, DraftLifetime.Tab);
+        var baseline = CaptureSearch();
+
+        var draft = await Drafts.RestoreAsync<IngredientSearchDraft>(IngredientSearchDraft.Key, DraftLifetime.Tab);
+        if (draft != null)
+        {
+            var filters = draft.Value.Filters;
+            // Ignore ingredients that no longer exist (deleted or merged since)
+            var existingIds = ingredients?.Select(i => i.Id).ToHashSet() ?? new HashSet<int>();
+            selectedIngredientIds = draft.Value.SelectedIngredientIds.Where(existingIds.Contains).ToHashSet();
+            searchTerm = filters.SearchTerm;
+            showFilters = filters.ShowFilters;
+            minCookTime = filters.MinCookTime;
+            maxCookTime = filters.MaxCookTime;
+            minServings = filters.MinServings;
+            maxServings = filters.MaxServings;
+            selectedTags = filters.Tags.ToHashSet();
+            await SearchRecipes();
+        }
+
+        autosave.Start(baseline);
+        StateHasChanged();
     }
 
     private async Task LoadIngredients()

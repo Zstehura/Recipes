@@ -29,6 +29,7 @@ public abstract class ComponentTestBase : BunitContext
         Services.AddSingleton(_ => new RecipeService(Db.CreateContext(), NullLogger<RecipeService>.Instance));
         Services.AddSingleton<IRecipeReader>(sp => sp.GetRequiredService<RecipeService>());
         Services.AddSingleton<GroceryListService>();
+        Services.AddSingleton(_ => new IngredientService(Db.CreateContext(), NullLogger<IngredientService>.Instance));
         Services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
     }
 

@@ -3,6 +3,7 @@
 @using RecipesApp.Services
 @inject RecipeService RecipeService
 @inject NavigationManager Navigation
+@inject DraftService Drafts
 
 <PageTitle>Recipes</PageTitle>
 
@@ -153,10 +154,54 @@ else
     private List<string> availableTags = new();
     private HashSet<string> selectedTags = new();
 
+    private DraftAutosave<RecipeFilters>? autosave;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadRecipes();
         await LoadAvailableTags();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await RestoreFiltersAsync();
+            return;
+        }
+
+        if (autosave != null)
+        {
+            await autosave.SaveIfChangedAsync(CaptureFilters());
+        }
+    }
+
+    private RecipeFilters CaptureFilters() => new(
+        searchTerm, showFilters, minCookTime, maxCookTime, minServings, maxServings, selectedTags.Order().ToList());
+
+    // Filters are kept for this browser tab only (they survive a reload or a lost connection,
+    // but a new visit starts unfiltered)
+    private async Task RestoreFiltersAsync()
+    {
+        autosave = new DraftAutosave<RecipeFilters>(Drafts, RecipeFilters.RecipeListKey, DraftLifetime.Tab);
+        var baseline = CaptureFilters();
+
+        var draft = await Drafts.RestoreAsync<RecipeFilters>(RecipeFilters.RecipeListKey, DraftLifetime.Tab);
+        if (draft != null)
+        {
+            var filters = draft.Value;
+            searchTerm = filters.SearchTerm;
+            showFilters = filters.ShowFilters;
+            minCookTime = filters.MinCookTime;
+            maxCookTime = filters.MaxCookTime;
+            minServings = filters.MinServings;
+            maxServings = filters.MaxServings;
+            selectedTags = filters.Tags.ToHashSet();
+            await LoadRecipes();
+        }
+
+        autosave.Start(baseline);
+        StateHasChanged();
     }
 
     private async Task LoadRecipes()
