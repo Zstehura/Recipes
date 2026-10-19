@@ -1,6 +1,7 @@
 using System.Net;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using Recipes.Tests.TestData;
 using RecipesApp.Data;
 using RecipesApp.Models;
 using Shouldly;
@@ -50,7 +51,7 @@ public sealed class RecipeImageEndpointTests : IDisposable
     [Fact]
     public async Task GetImage_RecipeWithImage_ReturnsBytesWithStoredContentType()
     {
-        var bytes = new byte[] { 0x89, 0x50, 0x4E, 0x47 };
+        var bytes = TestImages.Png;
         var id = SeedRecipe(bytes, "image/png");
         var client = _factory.CreateClient();
 
@@ -59,6 +60,45 @@ public sealed class RecipeImageEndpointTests : IDisposable
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         response.Content.Headers.ContentType?.MediaType.ShouldBe("image/png");
         (await response.Content.ReadAsByteArrayAsync()).ShouldBe(bytes);
+    }
+
+    [Fact]
+    public async Task GetImage_StoredSvgFromBeforeValidation_Returns404()
+    {
+        // Seeded directly into the database, as an image saved before uploads were validated
+        var id = SeedRecipe(TestImages.Svg, "image/svg+xml");
+        var client = _factory.CreateClient();
+
+        var response = await client.GetAsync($"/api/recipe/{id}/image");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task GetImage_WrongStoredContentType_ServesTypeDetectedFromBytes()
+    {
+        var id = SeedRecipe(TestImages.Jpeg, "text/html");
+        var client = _factory.CreateClient();
+
+        var response = await client.GetAsync($"/api/recipe/{id}/image");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        response.Content.Headers.ContentType?.MediaType.ShouldBe("image/jpeg");
+    }
+
+    [Theory]
+    [InlineData("/")]
+    [InlineData("/api/recipe/1/image")]
+    public async Task AnyResponse_IncludesSecurityHeaders(string url)
+    {
+        SeedRecipe(TestImages.Png, "image/png");
+        var client = _factory.CreateClient();
+
+        var response = await client.GetAsync(url);
+
+        response.Headers.GetValues("X-Content-Type-Options").ShouldBe(new[] { "nosniff" });
+        response.Headers.GetValues("X-Frame-Options").ShouldBe(new[] { "DENY" });
+        response.Headers.GetValues("Referrer-Policy").ShouldBe(new[] { "no-referrer" });
     }
 
     [Fact]

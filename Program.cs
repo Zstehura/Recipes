@@ -43,6 +43,16 @@ else
 {
     app.UseHttpsRedirection();
 }
+// Basic security headers on every response
+app.Use(async (context, next) =>
+{
+    var headers = context.Response.Headers;
+    headers.XContentTypeOptions = "nosniff";      // browsers must use the declared type, never guess it
+    headers.XFrameOptions = "DENY";               // the app can't be framed by another site (clickjacking)
+    headers["Referrer-Policy"] = "no-referrer";   // don't leak recipe URLs to other sites
+    await next();
+});
+
 app.UseStaticFiles();
 
 app.UseRouting();
@@ -51,13 +61,23 @@ app.MapRazorPages();
 app.MapBlazorHub();
 
 // API endpoint to serve recipe images separately for performance
-app.MapGet("/api/recipe/{id}/image", async (int id, RecipeService recipeService) =>
+app.MapGet("/api/recipe/{id}/image", async (int id, RecipeService recipeService, ILogger<Program> logger) =>
 {
-    var (imageData, contentType) = await recipeService.GetRecipeImageAsync(id);
-    if (imageData == null || contentType == null)
+    var (imageData, _) = await recipeService.GetRecipeImageAsync(id);
+    if (imageData == null)
     {
         return Results.NotFound();
     }
+
+    // Serve only allowed image formats, with the content type detected from the bytes rather
+    // than the stored one. This also covers images saved before uploads were validated.
+    var contentType = ImageValidator.DetectContentType(imageData);
+    if (contentType == null)
+    {
+        logger.LogWarning("Refused to serve image for recipe {RecipeId}: not an allowed image format", id);
+        return Results.NotFound();
+    }
+
     return Results.File(imageData, contentType);
 });
 
