@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using RecipesApp.Data;
 using RecipesApp.Services;
+using RecipesApp.Services.Drafts;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -33,6 +34,11 @@ builder.Services.AddScoped<IRecipeReader>(sp => sp.GetRequiredService<RecipeServ
 builder.Services.AddScoped<IngredientService>();
 builder.Services.AddScoped<RecipeImportExportService>();
 builder.Services.AddScoped<GroceryListService>();
+
+// Drafts: unsaved page state kept in encrypted browser storage (see Services/Drafts)
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddScoped<IDraftStore, ProtectedBrowserDraftStore>();
+builder.Services.AddScoped<DraftService>();
 
 var app = builder.Build();
 
