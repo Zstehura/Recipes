@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------------------
 # Build stage: full .NET SDK, discarded after publishing
 # ---------------------------------------------------------------------------------------
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 # Restore in its own layer, so packages are only re-downloaded when the project file changes
@@ -24,7 +24,7 @@ RUN mkdir -p /app/data
 # The "-extra" variant adds ICU and time zone data, which the app uses for cultures and
 # local times.
 # ---------------------------------------------------------------------------------------
-FROM mcr.microsoft.com/dotnet/aspnet:8.0-noble-chiseled-extra
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra
 WORKDIR /app
 
 # The app's files stay owned by root, so the app user can read but not modify them
