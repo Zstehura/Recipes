@@ -4,7 +4,7 @@ using RecipesApp.Models;
 
 namespace RecipesApp.Services;
 
-public class RecipeService
+public class RecipeService : IRecipeReader
 {
     private readonly RecipeDbContext _context;
 

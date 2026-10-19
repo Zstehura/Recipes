@@ -26,6 +26,8 @@ builder.Services.AddDbContext<RecipeDbContext>(options =>
 
 // Add Services
 builder.Services.AddScoped<RecipeService>();
+// Resolve IRecipeReader to the same scoped RecipeService instance (and DbContext)
+builder.Services.AddScoped<IRecipeReader>(sp => sp.GetRequiredService<RecipeService>());
 builder.Services.AddScoped<IngredientService>();
 builder.Services.AddScoped<RecipeImportExportService>();
 builder.Services.AddScoped<GroceryListService>();

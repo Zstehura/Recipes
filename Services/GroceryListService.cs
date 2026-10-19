@@ -4,11 +4,11 @@ namespace RecipesApp.Services;
 
 public class GroceryListService
 {
-    private readonly RecipeService _recipeService;
+    private readonly IRecipeReader _recipeReader;
 
-    public GroceryListService(RecipeService recipeService)
+    public GroceryListService(IRecipeReader recipeReader)
     {
-        _recipeService = recipeService;
+        _recipeReader = recipeReader;
     }
 
     public async Task<string> GenerateGroceryListAsync(Dictionary<int, int> recipeMultipliers)
@@ -22,7 +22,7 @@ public class GroceryListService
         var recipes = new List<Recipe>();
         foreach (var recipeId in recipeMultipliers.Keys)
         {
-            var recipe = await _recipeService.GetRecipeByIdAsync(recipeId);
+            var recipe = await _recipeReader.GetRecipeByIdAsync(recipeId);
             if (recipe != null)
             {
                 recipes.Add(recipe);
@@ -34,14 +34,22 @@ public class GroceryListService
             return "No valid recipes found.";
         }
 
-        // Aggregate ingredients
-        var aggregatedIngredients = AggregateIngredients(recipes, recipeMultipliers);
+        return BuildGroceryList(recipes, recipeMultipliers);
+    }
 
-        // Format the grocery list
+    /// <summary>
+    /// Aggregates ingredients across the given recipes and formats them as a grocery list.
+    /// Pure function: no database access, so it can be unit tested directly.
+    /// </summary>
+    /// <param name="recipes">Recipes with their ingredients loaded.</param>
+    /// <param name="recipeMultipliers">Recipe ID to quantity multiplier for every selected recipe.</param>
+    public static string BuildGroceryList(List<Recipe> recipes, Dictionary<int, int> recipeMultipliers)
+    {
+        var aggregatedIngredients = AggregateIngredients(recipes, recipeMultipliers);
         return FormatGroceryList(aggregatedIngredients, recipeMultipliers.Count);
     }
 
-    private Dictionary<string, AggregatedIngredient> AggregateIngredients(
+    private static Dictionary<string, AggregatedIngredient> AggregateIngredients(
         List<Recipe> recipes,
         Dictionary<int, int> recipeMultipliers)
     {
@@ -103,7 +111,7 @@ public class GroceryListService
         return ingredientDict;
     }
 
-    private string FormatGroceryList(Dictionary<string, AggregatedIngredient> aggregated, int recipeCount)
+    private static string FormatGroceryList(Dictionary<string, AggregatedIngredient> aggregated, int recipeCount)
     {
         var lines = new List<string>();
 
