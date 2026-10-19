@@ -1,0 +1,45 @@
+# Dependabot opens pull requests when dependencies have updates or security fixes.
+# CI runs on each one, so an update is only merged if the build and tests still pass.
+
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: "/"
+    schedule:
+      interval: weekly
+    groups:
+      # Batch related packages so they arrive in one PR instead of many.
+      ef-core:
+        patterns: ["Microsoft.EntityFrameworkCore*"]
+      test-dependencies:
+        patterns:
+          - "xunit*"
+          - "NSubstitute"
+          - "Shouldly"
+          - "coverlet*"
+          - "Microsoft.NET.Test.Sdk"
+          - "Microsoft.AspNetCore.Mvc.Testing"
+    ignore:
+      # The app targets .NET 8. New major versions of these packages require a newer
+      # runtime, so upgrading them is a deliberate project decision, not a routine bump.
+      - dependency-name: "Microsoft.EntityFrameworkCore*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "Microsoft.AspNetCore.*"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns: ["*"]
+
+  - package-ecosystem: docker
+    directory: "/"
+    schedule:
+      interval: weekly
+    ignore:
+      # Stay on the .NET 8 images; moving to a new .NET major is a deliberate upgrade.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
