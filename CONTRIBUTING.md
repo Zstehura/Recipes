@@ -66,6 +66,18 @@ Every push and pull request to `main` runs [.github/workflows/ci.yml](.github/wo
 ## Conventions
 
 - **Tests:** new or changed logic comes with tests in the same commit. Name tests `Method_Scenario_ExpectedResult` and follow Arrange-Act-Assert.
-- **Test layout:** `tests/Recipes.Tests/Unit` holds pure logic, `Data` holds services against SQLite, and `Integration` holds HTTP-level tests.
+- **Test layout:** `tests/Recipes.Tests/Unit` holds pure logic, `Data` holds services against SQLite, and `Integration` holds HTTP-level tests. Shared helpers (test images, recipe text builder, capturing logger) live in `TestData`.
 - **Known bugs:** a known bug is recorded as a test of the intended behavior, marked `Skip = "Bug #N: ..."`. Fixing the bug means removing the `Skip`.
 - **Commits:** small, one logical change each, written in the imperative mood ("Add X", "Fix Y").
+
+### Data and validation
+
+- **Schema changes:** the database is created with `EnsureCreated`, which never changes an existing database. Any model change that alters the schema needs an upgrade step in `Data/DatabaseInitializer.cs`. Each step must check whether it's needed (so it can run on every startup), back up the database first if it rebuilds a table, and have tests that start from the old format. `DatabaseInitializerTests` shows the pattern, including the check that an upgraded schema matches a newly created one.
+- **Validation:** field rules live as data annotations on the models and are enforced in `RecipeService` through `RecipeValidator`, so every save path is covered. Pages may check earlier for a better experience, but must not be the only check. Throw `ValidationException` with a message written for users.
+- **Uploads:** validate content with `ImageValidator` (file signatures against an allow-list). Never trust the file name or the browser-reported content type.
+
+### Errors and logging
+
+- Catch specific exceptions. Show users only messages written for them (such as `ValidationException` messages); log anything unexpected with `ILogger` and show a generic message.
+- Use message templates (`"Deleted recipe {RecipeId}"`), not string interpolation, so log fields stay structured.
+- Log IDs and counts, never recipe or ingredient text. Recipes are personal data.
