@@ -380,6 +380,47 @@ public sealed class RecipeServiceTests : IDisposable
         saved.Name.ShouldBe("Bread");
     }
 
+    [Fact]
+    public async Task AddRecipeAsync_InvalidIngredient_ThrowsAndSavesNothing()
+    {
+        var entries = new List<IngredientEntry> { Entry("Flour", -5, MeasurementUnit.Grams) };
+
+        await Should.ThrowAsync<ValidationException>(() => CreateService().AddRecipeAsync(NewRecipe(), entries));
+
+        using var context = _db.CreateContext();
+        (await context.Recipes.AnyAsync()).ShouldBeFalse();
+        (await context.Ingredients.AnyAsync()).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task UpdateRecipeAsync_InvalidRecipe_ThrowsAndKeepsExistingData()
+    {
+        var id = _db.SeedRecipe("Bread", "Flour");
+        var input = NewRecipe();
+        input.Id = id;
+        input.Name = new string('x', 201);
+
+        await Should.ThrowAsync<ValidationException>(() => CreateService().UpdateRecipeAsync(input, new List<IngredientEntry>()));
+
+        var saved = await LoadRecipe(id);
+        saved.Name.ShouldBe("Bread");
+        saved.RecipeIngredients.ShouldHaveSingleItem();
+    }
+
+    [Fact]
+    public async Task ImportFlow_OversizedIngredientName_IsRejectedOnSave()
+    {
+        // The parser accepts any line; RecipeService enforces the limits for every save path.
+        var text = Recipes.Tests.TestData.RecipeTextBuilder.Build(ingredients: new[] { "2 " + new string('x', 300) });
+        var parsed = new RecipeImportExportService().ParseRecipeText(text).recipes.ShouldHaveSingleItem();
+        var entries = IngredientEntryMapper.FromRecipeIngredients(parsed.RecipeIngredients);
+        parsed.RecipeIngredients = new List<RecipeIngredient>();
+
+        var ex = await Should.ThrowAsync<ValidationException>(() => CreateService().AddRecipeAsync(parsed, entries));
+
+        ex.Message.ShouldContain("Name cannot exceed 200 characters");
+    }
+
     // ---------------------------------------------------------------- Delete
 
     [Fact]

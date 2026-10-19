@@ -53,8 +53,10 @@ public class RecipeService : IRecipeReader
             .FirstOrDefaultAsync(r => r.Id == id);
     }
 
+    /// <exception cref="ValidationException">The recipe, an ingredient, or the image is invalid.</exception>
     public async Task<Recipe> AddRecipeAsync(Recipe recipe, List<IngredientEntry> ingredientEntries)
     {
+        RecipeValidator.Validate(recipe, ingredientEntries);
         ValidateImage(recipe);
 
         recipe.CreatedDate = DateTime.Now;
@@ -71,8 +73,10 @@ public class RecipeService : IRecipeReader
         return recipe;
     }
 
+    /// <exception cref="ValidationException">The recipe, an ingredient, or the image is invalid.</exception>
     public async Task<Recipe?> UpdateRecipeAsync(Recipe recipe, List<IngredientEntry> ingredientEntries, bool removeImage = false)
     {
+        RecipeValidator.Validate(recipe, ingredientEntries);
         if (!removeImage)
         {
             ValidateImage(recipe);

@@ -14,6 +14,7 @@ public class Recipe
     public ICollection<RecipeIngredient> RecipeIngredients { get; set; } = new List<RecipeIngredient>();
 
     [Required(ErrorMessage = "Instructions are required")]
+    [StringLength(20000, ErrorMessage = "Instructions cannot exceed 20,000 characters")]
     public string Instructions { get; set; } = string.Empty;
 
     [Range(1, int.MaxValue, ErrorMessage = "Cooking time must be at least 1 minute")]
@@ -22,8 +23,10 @@ public class Recipe
     [Range(1, int.MaxValue, ErrorMessage = "Servings must be at least 1")]
     public int Servings { get; set; }
 
+    [StringLength(500, ErrorMessage = "Tags cannot exceed 500 characters")]
     public string Tags { get; set; } = string.Empty;
 
+    [StringLength(10000, ErrorMessage = "Notes cannot exceed 10,000 characters")]
     public string Notes { get; set; } = string.Empty;
 
     public DateTime CreatedDate { get; set; } = DateTime.Now;
