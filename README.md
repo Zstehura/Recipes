@@ -4,7 +4,7 @@
 [![CodeQL](https://github.com/Zstehura/Recipes/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/Zstehura/Recipes/actions/workflows/codeql.yml)
 [![codecov](https://codecov.io/gh/Zstehura/Recipes/branch/main/graph/badge.svg)](https://codecov.io/gh/Zstehura/Recipes)
 
-A self-hosted recipe manager built with .NET 8, Blazor Server, and SQLite. Store your recipes, manage a shared ingredient library, generate a combined grocery list, and find recipes by what you have on hand. It runs as a single Docker container on a home server.
+A self-hosted recipe manager built with .NET 10, Blazor Server, and SQLite. Store your recipes, manage a shared ingredient library, generate a combined grocery list, and find recipes by what you have on hand. It runs as a single Docker container on a home server.
 
 ## Contents
 
@@ -45,9 +45,9 @@ A self-hosted recipe manager built with .NET 8, Blazor Server, and SQLite. Store
 
 | Area | Choice |
 |---|---|
-| Runtime | .NET 8 (LTS) |
+| Runtime | .NET 10 (LTS) |
 | UI | Blazor Server, Bootstrap 5, Bootstrap Icons |
-| Data | Entity Framework Core 8 with SQLite |
+| Data | Entity Framework Core 10 with SQLite |
 | Tests | xUnit, NSubstitute, Shouldly, coverlet, `WebApplicationFactory` |
 | CI and security | GitHub Actions, CodeQL, Dependabot, Codecov |
 | Hosting | Docker (multi-stage build, chiseled non-root runtime image), Docker Compose |
@@ -111,7 +111,7 @@ ports:
 
 ### Prerequisites
 
-- .NET 8 SDK, or Docker only (see [CONTRIBUTING.md](CONTRIBUTING.md) for running everything in the SDK container)
+- .NET 10 SDK, or Docker only (see [CONTRIBUTING.md](CONTRIBUTING.md) for running everything in the SDK container)
 
 ### Running
 
@@ -166,7 +166,7 @@ tests/           xUnit test project (see Testing)
 dotnet test
 ```
 
-The suite has over 300 tests and runs in about a second. CI runs it on every push and pull request, along with a formatting check and a Docker image build.
+The suite has over 300 tests and runs in about a second. CI runs it on every push and pull request, along with a formatting check and a Docker image build that is then started and smoke-tested.
 
 ### Strategy
 
@@ -194,7 +194,7 @@ Covered (about 95–100% line coverage per service):
 Not covered by automated tests:
 - **Razor pages and UI behavior.** Pages are thin and delegate to services, but their markup and event handling are untested. bUnit component tests are planned as the UI is reworked.
 - **Browser-only behavior,** such as copying to the clipboard and downloading files (JavaScript interop).
-- **The running container.** CI builds the Docker image but doesn't start it. Image changes were checked by hand with a local smoke test.
+- **The running container, beyond a smoke test.** CI starts the built image and checks that the page, the Blazor script, and the stylesheet load and that it runs as the non-root user, but doesn't exercise the UI in a browser.
 
 ## Design decisions
 

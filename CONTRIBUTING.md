@@ -4,12 +4,12 @@
 
 Either of these works:
 
-- **.NET 8 SDK** installed locally, or
+- **.NET 10 SDK** installed locally, or
 - **Docker** only (no SDK needed), using the official SDK image
 
 ## Build and test
 
-With the .NET 8 SDK:
+With the .NET 10 SDK:
 
 ```bash
 dotnet build
@@ -21,7 +21,7 @@ With Docker only:
 ```bash
 docker run --rm -v "$PWD":/src -w /src \
   -v recipes-nuget:/root/.nuget/packages \
-  mcr.microsoft.com/dotnet/sdk:8.0 dotnet test
+  mcr.microsoft.com/dotnet/sdk:10.0 dotnet test
 ```
 
 The named `recipes-nuget` volume caches NuGet packages, so later runs are fast.
@@ -59,7 +59,7 @@ Every push and pull request to `main` runs [.github/workflows/ci.yml](.github/wo
 1. Build in Release mode. Compiler warnings are errors.
 2. `dotnet format --verify-no-changes`
 3. All tests, with coverage
-4. A Docker image build. The image is built but not pushed.
+4. A Docker image build, followed by a smoke test that starts the image and checks the app, the Blazor script, and the stylesheet are served by the non-root user. The image isn't pushed anywhere.
 
 [CodeQL](.github/workflows/codeql.yml) also scans for security issues, and [Dependabot](.github/dependabot.yml) opens pull requests for dependency updates.
 
