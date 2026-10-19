@@ -111,12 +111,33 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
-      # Build only (push: false). Layers are cached in GitHub Actions to speed up later runs.
+      # Build only (push: false), loaded into the runner's Docker so the next step can run it.
+      # Layers are cached in GitHub Actions to speed up later runs.
       - name: Build image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           push: false
+          load: true
           tags: recipes:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # Start the real image and check it serves the app. A green build and passing tests
+      # don't prove this: the .NET 10 upgrade once produced an image without blazor.server.js,
+      # which left the UI dead while every other check passed.
+      - name: Smoke-test the image
+        run: |
+          docker run -d --name recipes -p 8080:8080 recipes:ci
+          for _ in $(seq 1 30); do
+            curl -sf -o /dev/null http://localhost:8080/ && break
+            sleep 1
+          done
+          for path in / /_framework/blazor.server.js /css/app.css; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:8080$path")
+            echo "$code $path"
+            if [ "$code" != "200" ]; then docker logs recipes; exit 1; fi
+          done
+          user=$(docker inspect recipes --format '{{.Config.User}}')
+          echo "container user: $user"
+          if [ "$user" != "1654" ]; then echo "expected the non-root app user (1654)"; exit 1; fi
