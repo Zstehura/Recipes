@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using RecipesApp.Data;
 using RecipesApp.Services;
@@ -7,18 +6,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
+// Blazor's SignalR hub keeps its default 32 KB message limit. File uploads (InputFile)
+// stream in chunks, so they don't need a larger limit.
 builder.Services.AddServerSideBlazor();
-builder.Services.AddSignalR()
-    .AddHubOptions<Microsoft.AspNetCore.SignalR.Hub>(options =>
-    {
-        options.MaximumReceiveMessageSize = 10 * 1024 * 1024; // 10MB
-    });
-
-// Configure form options to allow larger file uploads (10MB)
-builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
-{
-    options.MultipartBodyLengthLimit = 10 * 1024 * 1024; // 10MB
-});
 
 // Add Entity Framework
 builder.Services.AddDbContext<RecipeDbContext>(options =>
