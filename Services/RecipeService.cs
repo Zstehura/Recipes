@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using RecipesApp.Data;
 using RecipesApp.Models;
@@ -13,52 +14,41 @@ public class RecipeService : IRecipeReader
         _context = context;
     }
 
+    // Every list and detail query returns all recipe columns except the image bytes.
+    // Images can be several MB, so they are served separately by /api/recipe/{id}/image.
+    private static readonly Expression<Func<Recipe, Recipe>> WithoutImageData = r => new Recipe
+    {
+        Id = r.Id,
+        Name = r.Name,
+        Instructions = r.Instructions,
+        CookingTime = r.CookingTime,
+        Servings = r.Servings,
+        Tags = r.Tags,
+        Notes = r.Notes,
+        CreatedDate = r.CreatedDate,
+        ModifiedDate = r.ModifiedDate,
+        ImageContentType = r.ImageContentType,
+        RecipeIngredients = r.RecipeIngredients,
+        ImageData = null
+    };
+
+    private IQueryable<Recipe> RecipesWithIngredients() =>
+        _context.Recipes
+            .Include(r => r.RecipeIngredients)
+                .ThenInclude(ri => ri.Ingredient);
+
     public async Task<List<Recipe>> GetAllRecipesAsync()
     {
-        return await _context.Recipes
-            .Include(r => r.RecipeIngredients)
-                .ThenInclude(ri => ri.Ingredient)
-            .Select(r => new Recipe
-            {
-                Id = r.Id,
-                Name = r.Name,
-                Instructions = r.Instructions,
-                CookingTime = r.CookingTime,
-                Servings = r.Servings,
-                Tags = r.Tags,
-                Notes = r.Notes,
-                CreatedDate = r.CreatedDate,
-                ModifiedDate = r.ModifiedDate,
-                ImageContentType = r.ImageContentType,
-                RecipeIngredients = r.RecipeIngredients,
-                // Exclude ImageData for performance
-                ImageData = null
-            })
+        return await RecipesWithIngredients()
+            .Select(WithoutImageData)
             .OrderByDescending(r => r.ModifiedDate)
             .ToListAsync();
     }
 
     public async Task<Recipe?> GetRecipeByIdAsync(int id)
     {
-        return await _context.Recipes
-            .Include(r => r.RecipeIngredients)
-                .ThenInclude(ri => ri.Ingredient)
-            .Select(r => new Recipe
-            {
-                Id = r.Id,
-                Name = r.Name,
-                Instructions = r.Instructions,
-                CookingTime = r.CookingTime,
-                Servings = r.Servings,
-                Tags = r.Tags,
-                Notes = r.Notes,
-                CreatedDate = r.CreatedDate,
-                ModifiedDate = r.ModifiedDate,
-                ImageContentType = r.ImageContentType,
-                RecipeIngredients = r.RecipeIngredients,
-                // Exclude ImageData for performance
-                ImageData = null
-            })
+        return await RecipesWithIngredients()
+            .Select(WithoutImageData)
             .FirstOrDefaultAsync(r => r.Id == id);
     }
 
@@ -132,34 +122,7 @@ public class RecipeService : IRecipeReader
 
     public async Task<List<Recipe>> SearchRecipesAsync(string searchTerm)
     {
-        if (string.IsNullOrWhiteSpace(searchTerm))
-            return await GetAllRecipesAsync();
-
-        var lowerSearchTerm = searchTerm.ToLower();
-        return await _context.Recipes
-            .Include(r => r.RecipeIngredients)
-                .ThenInclude(ri => ri.Ingredient)
-            .Where(r => r.Name.ToLower().Contains(lowerSearchTerm) ||
-                       r.RecipeIngredients.Any(ri => ri.Ingredient.Name.ToLower().Contains(lowerSearchTerm)) ||
-                       r.Tags.ToLower().Contains(lowerSearchTerm))
-            .Select(r => new Recipe
-            {
-                Id = r.Id,
-                Name = r.Name,
-                Instructions = r.Instructions,
-                CookingTime = r.CookingTime,
-                Servings = r.Servings,
-                Tags = r.Tags,
-                Notes = r.Notes,
-                CreatedDate = r.CreatedDate,
-                ModifiedDate = r.ModifiedDate,
-                ImageContentType = r.ImageContentType,
-                RecipeIngredients = r.RecipeIngredients,
-                // Exclude ImageData for performance
-                ImageData = null
-            })
-            .OrderByDescending(r => r.ModifiedDate)
-            .ToListAsync();
+        return await FilterRecipesByIngredientsWithFiltersAsync(new List<int>(), searchTerm);
     }
 
     public async Task<List<Recipe>> FilterRecipesAsync(
@@ -170,71 +133,8 @@ public class RecipeService : IRecipeReader
         int? minServings = null,
         int? maxServings = null)
     {
-        var query = _context.Recipes
-            .Include(r => r.RecipeIngredients)
-                .ThenInclude(ri => ri.Ingredient)
-            .AsQueryable();
-
-        // Apply search term filter
-        if (!string.IsNullOrWhiteSpace(searchTerm))
-        {
-            var lowerSearchTerm = searchTerm.ToLower();
-            query = query.Where(r => r.Name.ToLower().Contains(lowerSearchTerm) ||
-                                   r.RecipeIngredients.Any(ri => ri.Ingredient.Name.ToLower().Contains(lowerSearchTerm)) ||
-                                   r.Tags.ToLower().Contains(lowerSearchTerm));
-        }
-
-        // Apply cook time filters
-        if (minCookTime.HasValue)
-        {
-            query = query.Where(r => r.CookingTime >= minCookTime.Value);
-        }
-        if (maxCookTime.HasValue)
-        {
-            query = query.Where(r => r.CookingTime <= maxCookTime.Value);
-        }
-
-        // Apply serving count filters
-        if (minServings.HasValue)
-        {
-            query = query.Where(r => r.Servings >= minServings.Value);
-        }
-        if (maxServings.HasValue)
-        {
-            query = query.Where(r => r.Servings <= maxServings.Value);
-        }
-
-        // Apply tag filters (matches if recipe contains any of the selected tags)
-        if (tags != null && tags.Any())
-        {
-            var lowerTags = tags.Select(t => t.ToLower().Trim()).ToList();
-            query = query.Where(r => !string.IsNullOrWhiteSpace(r.Tags) &&
-                lowerTags.Any(tag =>
-                    r.Tags.ToLower().Contains("," + tag + ",") ||
-                    r.Tags.ToLower().StartsWith(tag + ",") ||
-                    r.Tags.ToLower().EndsWith("," + tag) ||
-                    r.Tags.ToLower() == tag));
-        }
-
-        return await query
-            .Select(r => new Recipe
-            {
-                Id = r.Id,
-                Name = r.Name,
-                Instructions = r.Instructions,
-                CookingTime = r.CookingTime,
-                Servings = r.Servings,
-                Tags = r.Tags,
-                Notes = r.Notes,
-                CreatedDate = r.CreatedDate,
-                ModifiedDate = r.ModifiedDate,
-                ImageContentType = r.ImageContentType,
-                RecipeIngredients = r.RecipeIngredients,
-                // Exclude ImageData for performance
-                ImageData = null
-            })
-            .OrderByDescending(r => r.ModifiedDate)
-            .ToListAsync();
+        return await FilterRecipesByIngredientsWithFiltersAsync(
+            new List<int>(), searchTerm, minCookTime, maxCookTime, tags, minServings, maxServings);
     }
 
     public async Task<List<string>> GetAllTagsAsync()
@@ -257,44 +157,13 @@ public class RecipeService : IRecipeReader
 
     public async Task<List<Recipe>> FilterRecipesByIngredientsAsync(List<int> ingredientIds)
     {
-        if (ingredientIds == null || !ingredientIds.Any())
-        {
-            return await GetAllRecipesAsync();
-        }
-
-        // Find recipes that contain ALL of the selected ingredients
-        var query = _context.Recipes
-            .Include(r => r.RecipeIngredients)
-                .ThenInclude(ri => ri.Ingredient)
-            .AsQueryable();
-
-        // Filter to only recipes that have all selected ingredients
-        foreach (var ingredientId in ingredientIds)
-        {
-            query = query.Where(r => r.RecipeIngredients.Any(ri => ri.IngredientId == ingredientId));
-        }
-
-        return await query
-            .Select(r => new Recipe
-            {
-                Id = r.Id,
-                Name = r.Name,
-                Instructions = r.Instructions,
-                CookingTime = r.CookingTime,
-                Servings = r.Servings,
-                Tags = r.Tags,
-                Notes = r.Notes,
-                CreatedDate = r.CreatedDate,
-                ModifiedDate = r.ModifiedDate,
-                ImageContentType = r.ImageContentType,
-                RecipeIngredients = r.RecipeIngredients,
-                // Exclude ImageData for performance
-                ImageData = null
-            })
-            .OrderByDescending(r => r.ModifiedDate)
-            .ToListAsync();
+        return await FilterRecipesByIngredientsWithFiltersAsync(ingredientIds);
     }
 
+    /// <summary>
+    /// Returns recipes matching every given filter, most recently modified first.
+    /// Null or empty filters are ignored, so calling it with no filters returns all recipes.
+    /// </summary>
     public async Task<List<Recipe>> FilterRecipesByIngredientsWithFiltersAsync(
         List<int> ingredientIds,
         string? searchTerm = null,
@@ -304,10 +173,7 @@ public class RecipeService : IRecipeReader
         int? minServings = null,
         int? maxServings = null)
     {
-        var query = _context.Recipes
-            .Include(r => r.RecipeIngredients)
-                .ThenInclude(ri => ri.Ingredient)
-            .AsQueryable();
+        var query = RecipesWithIngredients();
 
         // Filter by ingredients - recipes must contain ALL selected ingredients
         if (ingredientIds != null && ingredientIds.Any())
@@ -318,7 +184,7 @@ public class RecipeService : IRecipeReader
             }
         }
 
-        // Apply search term filter
+        // Search term matches the recipe name, any ingredient name, or the tags
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
             var lowerSearchTerm = searchTerm.ToLower();
@@ -360,22 +226,7 @@ public class RecipeService : IRecipeReader
         }
 
         return await query
-            .Select(r => new Recipe
-            {
-                Id = r.Id,
-                Name = r.Name,
-                Instructions = r.Instructions,
-                CookingTime = r.CookingTime,
-                Servings = r.Servings,
-                Tags = r.Tags,
-                Notes = r.Notes,
-                CreatedDate = r.CreatedDate,
-                ModifiedDate = r.ModifiedDate,
-                ImageContentType = r.ImageContentType,
-                RecipeIngredients = r.RecipeIngredients,
-                // Exclude ImageData for performance
-                ImageData = null
-            })
+            .Select(WithoutImageData)
             .OrderByDescending(r => r.ModifiedDate)
             .ToListAsync();
     }
