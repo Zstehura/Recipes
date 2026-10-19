@@ -5,6 +5,7 @@
 @inject GroceryListService GroceryListService
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
+@inject ILogger<GroceryList> Logger
 
 <PageTitle>Grocery List</PageTitle>
 
@@ -397,8 +398,10 @@
             copyMessage = null;
             StateHasChanged();
         }
-        catch
+        catch (JSException ex)
         {
+            // Usually the browser denied clipboard access (permissions or a non-HTTPS page)
+            Logger.LogInformation(ex, "Clipboard copy failed");
             copyMessage = "Failed to copy. Please select and copy manually.";
             StateHasChanged();
         }

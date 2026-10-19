@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
+using Recipes.Tests.TestData;
 using RecipesApp.Models;
 using RecipesApp.Services;
 using Shouldly;
@@ -13,7 +15,7 @@ public sealed class IngredientServiceTests : IDisposable
 
     public void Dispose() => _db.Dispose();
 
-    private IngredientService CreateService() => new(_db.CreateContext());
+    private IngredientService CreateService() => new(_db.CreateContext(), NullLogger<IngredientService>.Instance);
 
     // ---------------------------------------------------------------- Queries
 
@@ -186,6 +188,25 @@ public sealed class IngredientServiceTests : IDisposable
         bread.Quantity.ShouldBe(500m);
         bread.Unit.ShouldBe("g");
         bread.Modifier.ShouldBe("sifted");
+    }
+
+    [Fact]
+    public async Task MergeIngredientsAsync_LogsIdsAndCounts()
+    {
+        _db.SeedRecipe("Bread", new[]
+        {
+            ("Flour", (decimal?)500m, (string?)"g", (string?)null),
+            ("Plain flour", (decimal?)200m, (string?)"g", (string?)null),
+        });
+        _db.SeedRecipe("Cake", "Plain flour");
+        var targetId = await IdOf("Flour");
+        var sourceId = await IdOf("Plain flour");
+        var logger = new ListLogger<IngredientService>();
+
+        await new IngredientService(_db.CreateContext(), logger).MergeIngredientsAsync(targetId, sourceId);
+
+        logger.Entries.ShouldHaveSingleItem().Message
+            .ShouldBe($"Merged ingredient {sourceId} into {targetId}: 1 line(s) moved, 1 combined");
     }
 
     [Fact]

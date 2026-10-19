@@ -7,10 +7,12 @@ namespace RecipesApp.Services;
 public class IngredientService
 {
     private readonly RecipeDbContext _context;
+    private readonly ILogger<IngredientService> _logger;
 
-    public IngredientService(RecipeDbContext context)
+    public IngredientService(RecipeDbContext context, ILogger<IngredientService> logger)
     {
         _context = context;
+        _logger = logger;
     }
 
     /// <summary>
@@ -66,6 +68,8 @@ public class IngredientService
 
         ingredient.Name = NormalizeName(newName);
         await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Renamed ingredient {IngredientId}", id);
         return true;
     }
 
@@ -109,6 +113,7 @@ public class IngredientService
         // Both saves succeed or neither does
         await using var transaction = await _context.Database.BeginTransactionAsync();
 
+        var combinedCount = 0;
         foreach (var line in sourceLines)
         {
             var sameLine = targetLines.FirstOrDefault(t =>
@@ -120,6 +125,7 @@ public class IngredientService
             {
                 sameLine.Quantity = AddQuantities(sameLine.Quantity, line.Quantity);
                 _context.RecipeIngredients.Remove(line);
+                combinedCount++;
             }
             else
             {
@@ -135,6 +141,10 @@ public class IngredientService
         await _context.SaveChangesAsync();
 
         await transaction.CommitAsync();
+
+        _logger.LogInformation(
+            "Merged ingredient {SourceId} into {TargetId}: {MovedCount} line(s) moved, {CombinedCount} combined",
+            sourceId, targetId, sourceLines.Count - combinedCount, combinedCount);
         return true;
     }
 
@@ -151,6 +161,8 @@ public class IngredientService
 
         _context.Ingredients.Remove(ingredient);
         await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Deleted ingredient {IngredientId}", id);
         return true;
     }
 

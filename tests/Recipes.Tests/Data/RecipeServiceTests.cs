@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using Recipes.Tests.TestData;
 using RecipesApp.Models;
 using RecipesApp.Services;
@@ -13,7 +14,7 @@ public sealed class RecipeServiceTests : IDisposable
 
     public void Dispose() => _db.Dispose();
 
-    private RecipeService CreateService() => new(_db.CreateContext());
+    private RecipeService CreateService() => new(_db.CreateContext(), NullLogger<RecipeService>.Instance);
 
     private static Recipe NewRecipe(string name = "Pancakes") => new()
     {
@@ -419,6 +420,36 @@ public sealed class RecipeServiceTests : IDisposable
         var ex = await Should.ThrowAsync<ValidationException>(() => CreateService().AddRecipeAsync(parsed, entries));
 
         ex.Message.ShouldContain("Name cannot exceed 200 characters");
+    }
+
+    [Fact]
+    public async Task AddRecipeAsync_LogsRecipeIdButNotPersonalContent()
+    {
+        var logger = new ListLogger<RecipeService>();
+        var service = new RecipeService(_db.CreateContext(), logger);
+        var input = NewRecipe("Grandma's Secret Lasagna");
+
+        var recipe = await service.AddRecipeAsync(input, new List<IngredientEntry> { Entry("Secret spice", 1, MeasurementUnit.Grams) });
+
+        var entry = logger.Entries.ShouldHaveSingleItem();
+        entry.Message.ShouldBe($"Created recipe {recipe.Id} with 1 ingredient(s)");
+        logger.Entries.ShouldAllBe(e => !e.Message.Contains("Lasagna") && !e.Message.Contains("Secret spice"));
+    }
+
+    [Fact]
+    public async Task AddRecipeAsync_RejectedImage_LogsWarningWithoutContent()
+    {
+        var logger = new ListLogger<RecipeService>();
+        var service = new RecipeService(_db.CreateContext(), logger);
+        var input = NewRecipe("Private Recipe");
+        input.ImageData = TestImages.Svg;
+
+        await Should.ThrowAsync<ValidationException>(() => service.AddRecipeAsync(input, new List<IngredientEntry>()));
+
+        var entry = logger.Entries.ShouldHaveSingleItem();
+        entry.Level.ShouldBe(Microsoft.Extensions.Logging.LogLevel.Warning);
+        entry.Message.ShouldNotContain("Private Recipe");
+        entry.Message.ShouldNotContain("<script>");
     }
 
     // ---------------------------------------------------------------- Delete

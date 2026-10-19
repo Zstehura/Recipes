@@ -2,9 +2,11 @@
 @using RecipesApp.Models
 @using RecipesApp.Services
 @using Microsoft.AspNetCore.Components.Forms
+@using System.ComponentModel.DataAnnotations
 @inject RecipeService RecipeService
 @inject RecipeImportExportService ImportExportService
 @inject IJSRuntime JSRuntime
+@inject ILogger<ImportExport> Logger
 
 <PageTitle>Import/Export Recipes</PageTitle>
 
@@ -302,7 +304,8 @@ Best served warm. Store in airtight container for up to 5 days.
         }
         catch (Exception ex)
         {
-            importErrors.Add($"Error parsing text: {ex.Message}");
+            Logger.LogError(ex, "Failed to parse pasted import text ({Length} characters)", pastedText.Length);
+            importErrors.Add("Something went wrong reading the text. Please check the format and try again.");
         }
         finally
         {
@@ -336,7 +339,8 @@ Best served warm. Store in airtight container for up to 5 days.
         }
         catch (Exception ex)
         {
-            exportMessage = $"Error exporting recipes: {ex.Message}";
+            Logger.LogError(ex, "Failed to export recipes");
+            exportMessage = "Export failed. Please try again.";
         }
         finally
         {
@@ -373,7 +377,8 @@ Best served warm. Store in airtight container for up to 5 days.
         }
         catch (Exception ex)
         {
-            importErrors.Add($"Error reading file: {ex.Message}");
+            Logger.LogWarning(ex, "Failed to read import file ({SizeBytes} bytes)", e.File.Size);
+            importErrors.Add("The file couldn't be read. Make sure it's a plain text file and try again.");
         }
         finally
         {
@@ -406,9 +411,15 @@ Best served warm. Store in airtight container for up to 5 days.
                     await RecipeService.AddRecipeAsync(recipe, ingredientEntries);
                     successCount++;
                 }
+                catch (ValidationException ex)
+                {
+                    // Validation messages are written for users, so they're safe to show
+                    newErrors.Add($"Failed to import '{recipe.Name}': {ex.Message}");
+                }
                 catch (Exception ex)
                 {
-                    newErrors.Add($"Failed to import '{recipe.Name}': {ex.Message}");
+                    Logger.LogError(ex, "Failed to import a recipe");
+                    newErrors.Add($"Failed to import '{recipe.Name}'. Please try again.");
                 }
             }
 
@@ -431,7 +442,8 @@ Best served warm. Store in airtight container for up to 5 days.
         }
         catch (Exception ex)
         {
-            importErrors.Add($"Error during import: {ex.Message}");
+            Logger.LogError(ex, "Import failed after {SuccessCount} recipe(s)", successCount);
+            importErrors.Add("The import stopped because of an unexpected error. Please try again.");
         }
         finally
         {

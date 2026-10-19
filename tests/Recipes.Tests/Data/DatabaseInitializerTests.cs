@@ -164,7 +164,7 @@ public sealed class DatabaseInitializerTests : IDisposable
         await InitializeAsync(context);
         context.ChangeTracker.Clear();
 
-        var updated = await new RecipeService(context).UpdateRecipeAsync(
+        var updated = await new RecipeService(context, NullLogger<RecipeService>.Instance).UpdateRecipeAsync(
             new Recipe { Id = recipeId, Name = "Salad", Instructions = "Chop.", CookingTime = 5, Servings = 2 },
             new List<IngredientEntry>
             {

@@ -9,10 +9,12 @@ namespace RecipesApp.Services;
 public class RecipeService : IRecipeReader
 {
     private readonly RecipeDbContext _context;
+    private readonly ILogger<RecipeService> _logger;
 
-    public RecipeService(RecipeDbContext context)
+    public RecipeService(RecipeDbContext context, ILogger<RecipeService> logger)
     {
         _context = context;
+        _logger = logger;
     }
 
     // Every list and detail query returns all recipe columns except the image bytes.
@@ -70,6 +72,10 @@ public class RecipeService : IRecipeReader
 
         _context.Recipes.Add(recipe);
         await _context.SaveChangesAsync();
+
+        // Log IDs and counts only; recipe content is personal data
+        _logger.LogInformation("Created recipe {RecipeId} with {IngredientCount} ingredient(s)",
+            recipe.Id, recipe.RecipeIngredients.Count);
         return recipe;
     }
 
@@ -118,6 +124,9 @@ public class RecipeService : IRecipeReader
         await ProcessIngredientsAsync(existingRecipe, ingredientEntries);
 
         await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Updated recipe {RecipeId} ({IngredientCount} ingredient(s), image removed: {ImageRemoved})",
+            existingRecipe.Id, existingRecipe.RecipeIngredients.Count, removeImage);
         return existingRecipe;
     }
 
@@ -129,6 +138,8 @@ public class RecipeService : IRecipeReader
 
         _context.Recipes.Remove(recipe);
         await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Deleted recipe {RecipeId}", id);
         return true;
     }
 
@@ -299,7 +310,7 @@ public class RecipeService : IRecipeReader
     /// trusting whatever the caller passed.
     /// </summary>
     /// <exception cref="ValidationException">The image isn't an allowed format or is too large.</exception>
-    private static void ValidateImage(Recipe recipe)
+    private void ValidateImage(Recipe recipe)
     {
         if (recipe.ImageData == null)
         {
@@ -309,7 +320,11 @@ public class RecipeService : IRecipeReader
 
         var result = ImageValidator.Validate(recipe.ImageData);
         if (!result.IsValid)
+        {
+            _logger.LogWarning("Rejected image for recipe {RecipeId}: {SizeBytes} bytes, not an allowed format or too large",
+                recipe.Id, recipe.ImageData.Length);
             throw new ValidationException(result.ErrorMessage);
+        }
 
         recipe.ImageContentType = result.ContentType;
     }
