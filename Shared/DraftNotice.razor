@@ -1,0 +1,29 @@
+@inject TimeProvider TimeProvider
+
+@* Tells the user that unsaved work was brought back, and lets them throw it away. *@
+@if (SavedAt is DateTimeOffset savedAt)
+{
+    <div class="alert alert-info d-flex flex-wrap align-items-center justify-content-between gap-2" role="status">
+        <span>
+            Restored your unsaved changes from @DraftTime.Describe(savedAt, TimeProvider.GetUtcNow()).
+            @if (!string.IsNullOrEmpty(Note))
+            {
+                <span class="d-block small text-muted">@Note</span>
+            }
+        </span>
+        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="OnDiscard">Discard changes</button>
+    </div>
+}
+
+@code {
+    /// <summary>When the restored draft was saved; nothing is shown when null.</summary>
+    [Parameter]
+    public DateTimeOffset? SavedAt { get; set; }
+
+    /// <summary>Optional extra line, e.g. what a draft doesn't include.</summary>
+    [Parameter]
+    public string? Note { get; set; }
+
+    [Parameter]
+    public EventCallback OnDiscard { get; set; }
+}

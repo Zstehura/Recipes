@@ -7,10 +7,21 @@
 @inject RecipeService RecipeService
 @inject NavigationManager Navigation
 @inject ILogger<RecipeForm> Logger
+@inject DraftService Drafts
 
 <PageTitle>@(recipe.Id > 0 ? "Edit Recipe" : "New Recipe")</PageTitle>
 
 <h1>@(recipe.Id > 0 ? "Edit Recipe" : "New Recipe")</h1>
+
+<DraftNotice SavedAt="restoredDraftSavedAt"
+             Note="@(Id > 0 ? "Photo changes aren't kept in drafts." : "Photos aren't kept in drafts.")"
+             OnDiscard="DiscardDraftAsync" />
+@if (staleDraftDiscarded)
+{
+    <div class="alert alert-warning" role="status">
+        Your unsaved changes to this recipe were discarded because it has been changed since.
+    </div>
+}
 
 <EditForm Model="@recipe" OnValidSubmit="@HandleValidSubmit">
     <DataAnnotationsValidator />
@@ -138,7 +149,7 @@
 
             <div class="mb-3">
                 <button type="submit" class="btn btn-primary me-2">Save Recipe</button>
-                <a href="/" class="btn btn-secondary">Cancel</a>
+                <button type="button" class="btn btn-secondary" @onclick="CancelAsync">Cancel</button>
             </div>
         </div>
     </div>
@@ -152,6 +163,12 @@
     private List<IngredientEntry> ingredientEntries = new();
     private string imageError = string.Empty;
     private string saveError = string.Empty;
+
+    // Drafts: unsaved changes kept in the browser (see Services/Drafts)
+    private DraftAutosave<RecipeDraft>? autosave;
+    private DateTime? baseModifiedDate;
+    private DateTimeOffset? restoredDraftSavedAt;
+    private bool staleDraftDiscarded;
     private bool imageRemoved = false;
 
     protected override async Task OnInitializedAsync()
@@ -162,6 +179,7 @@
             if (existingRecipe != null)
             {
                 recipe = existingRecipe;
+                baseModifiedDate = existingRecipe.ModifiedDate;
                 imageRemoved = false; // Reset flag when loading existing recipe
                 
                 // Load image data separately if it exists
@@ -185,6 +203,73 @@
             // Add one empty ingredient entry for new recipes
             AddIngredient();
         }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Browser storage needs JavaScript interop, which is only available once the page
+            // is interactive, so drafts are restored here rather than in OnInitializedAsync
+            await RestoreDraftAsync();
+            return;
+        }
+
+        // After every render, save the form as a draft if anything changed
+        if (autosave != null)
+        {
+            await autosave.SaveIfChangedAsync(CaptureDraft());
+        }
+    }
+
+    private RecipeDraft CaptureDraft() => RecipeDraft.Capture(recipe, ingredientEntries, baseModifiedDate);
+
+    private async Task RestoreDraftAsync()
+    {
+        if (Id > 0 && recipe.Id == 0)
+        {
+            return; // the recipe wasn't found and we're navigating away
+        }
+
+        autosave = new DraftAutosave<RecipeDraft>(Drafts, RecipeDraft.KeyFor(Id), DraftLifetime.Device);
+        var baseline = CaptureDraft();
+
+        var draft = await Drafts.RestoreAsync<RecipeDraft>(autosave.Key, DraftLifetime.Device);
+        if (draft != null && draft.Value.IsStaleFor(recipe))
+        {
+            await Drafts.DiscardAsync(autosave.Key, DraftLifetime.Device);
+            staleDraftDiscarded = true;
+        }
+        else if (draft != null)
+        {
+            ingredientEntries = draft.Value.ApplyTo(recipe);
+            restoredDraftSavedAt = draft.SavedAt;
+        }
+
+        autosave.Start(baseline);
+        StateHasChanged();
+    }
+
+    private async Task DiscardDraftAsync()
+    {
+        if (autosave != null)
+        {
+            await autosave.ClearAsync();
+        }
+
+        // Reload the page to show the recipe as it was before the draft
+        Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
+    }
+
+    private async Task CancelAsync()
+    {
+        // Cancel means "throw away my changes", so the draft goes too
+        if (autosave != null)
+        {
+            await autosave.ClearAsync();
+        }
+
+        Navigation.NavigateTo("/");
     }
 
     private void AddIngredient()
@@ -298,6 +383,11 @@
             Logger.LogError(ex, "Failed to save recipe {RecipeId}", recipe.Id);
             saveError = "The recipe couldn't be saved. Please try again.";
             return;
+        }
+
+        if (autosave != null)
+        {
+            await autosave.ClearAsync();
         }
 
         Navigation.NavigateTo("/");
