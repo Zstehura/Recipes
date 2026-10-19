@@ -1,5 +1,7 @@
 using System.Net;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Recipes.Tests.TestData;
 using RecipesApp.Data;
@@ -84,6 +86,27 @@ public sealed class RecipeImageEndpointTests : IDisposable
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         response.Content.Headers.ContentType?.MediaType.ShouldBe("image/jpeg");
+    }
+
+    [Fact]
+    public async Task UnhandledError_InProduction_ShowsGenericErrorPageWithoutDetails()
+    {
+        using var production = _factory.WithWebHostBuilder(builder => builder.UseEnvironment("Production"));
+        var client = production.CreateClient();
+        await client.GetAsync("/");   // start the app so the database is created
+        using (var scope = production.Services.CreateScope())
+        {
+            // Break the database so the next request throws
+            scope.ServiceProvider.GetRequiredService<RecipeDbContext>().Database.ExecuteSqlRaw("DROP TABLE RecipeIngredients; DROP TABLE Recipes;");
+        }
+
+        var response = await client.GetAsync("/api/recipe/1/image");
+        var body = await response.Content.ReadAsStringAsync();
+
+        response.StatusCode.ShouldBe(HttpStatusCode.InternalServerError);
+        body.ShouldContain("Something went wrong");
+        body.ShouldNotContain("SqliteException");
+        body.ShouldNotContain("no such table");
     }
 
     [Theory]

@@ -1,0 +1,24 @@
+@page
+@{
+    // Shown by UseExceptionHandler("/Error") outside Development. The exception details are
+    // logged by the middleware; the user only gets a reference to match against the logs.
+    Layout = null;
+    var requestId = System.Diagnostics.Activity.Current?.Id ?? HttpContext.TraceIdentifier;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Error - Recipes</title>
+    <link rel="stylesheet" href="/css/bootstrap/bootstrap.min.css" />
+</head>
+<body class="p-4">
+    <main class="container">
+        <h1 class="h3 text-danger">Something went wrong</h1>
+        <p>An error occurred while processing your request. Please go back and try again.</p>
+        <p class="text-muted small">Reference: <code>@requestId</code></p>
+        <a href="/" class="btn btn-primary">Back to recipes</a>
+    </main>
+</body>
+</html>
