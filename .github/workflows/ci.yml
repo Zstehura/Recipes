@@ -1,0 +1,122 @@
+# Continuous integration: build, test, check formatting, and verify the Docker image builds.
+#
+# Actions are pinned to full commit SHAs (with the version in a comment) rather than tags,
+# because a tag can be moved to point at different code. Dependabot keeps the pins current.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Least privilege: these jobs only need to read the repository.
+permissions:
+  contents: read
+
+# If a newer commit is pushed to the same branch or PR, cancel the older run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  build-and-test:
+    name: Build, test, and check formatting
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: 8.0.x
+
+      # Reuse downloaded NuGet packages between runs. The key changes whenever any
+      # project file changes, so new or updated packages invalidate the cache.
+      - name: Cache NuGet packages
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore Recipes.sln
+
+      # Warnings are errors (see the .csproj files), so this also fails on new warnings.
+      - name: Build
+        run: dotnet build Recipes.sln --no-restore --configuration Release
+
+      # Fails if any file doesn't match .editorconfig. Fix locally with `dotnet format`.
+      - name: Check formatting
+        run: dotnet format Recipes.sln --verify-no-changes --no-restore
+
+      - name: Test with coverage
+        run: >
+          dotnet test Recipes.sln
+          --no-build
+          --configuration Release
+          --collect:"XPlat Code Coverage"
+          --results-directory TestResults
+          --logger trx
+
+      # Turn the raw coverage file into an HTML report and a summary on the run's page.
+      - name: Generate coverage report
+        if: ${{ !cancelled() }}
+        run: |
+          dotnet tool install --global dotnet-reportgenerator-globaltool --version 5.5.11
+          reportgenerator \
+            -reports:"TestResults/**/coverage.cobertura.xml" \
+            -targetdir:CoverageReport \
+            -reporttypes:"Html;MarkdownSummaryGithub;Cobertura"
+          cat CoverageReport/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload test results and coverage report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-results-and-coverage
+          path: |
+            TestResults/
+            CoverageReport/
+          retention-days: 14
+
+      # Publishes coverage to codecov.io for the README badge. Needs the CODECOV_TOKEN
+      # repository secret; without it the upload is skipped and the build still passes.
+      - name: Upload coverage to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          files: CoverageReport/Cobertura.xml
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
+
+  docker:
+    name: Docker image builds
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      # Build only (push: false). Layers are cached in GitHub Actions to speed up later runs.
+      - name: Build image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          push: false
+          tags: recipes:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
