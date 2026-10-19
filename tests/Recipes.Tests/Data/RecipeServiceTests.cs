@@ -196,6 +196,28 @@ public sealed class RecipeServiceTests : IDisposable
             .ShouldBe(new[] { "sliced", "diced" }, ignoreOrder: true);
     }
 
+    [Fact]
+    public async Task ImportFlow_ParseMapAndSave_StoresBaseUnitQuantities()
+    {
+        // The same steps the Import page runs: parse text, map lines to entries, save.
+        var text = Recipes.Tests.TestData.RecipeTextBuilder.Build(ingredients: new[]
+        {
+            "2 cups milk", "1.5 kg flour", "salt (to taste)",
+        });
+        var parsed = new RecipeImportExportService().ParseRecipeText(text).recipes.ShouldHaveSingleItem();
+        var entries = IngredientEntryMapper.FromRecipeIngredients(parsed.RecipeIngredients);
+        parsed.RecipeIngredients = new List<RecipeIngredient>();
+
+        var saved = await CreateService().AddRecipeAsync(parsed, entries);
+
+        var lines = (await LoadRecipe(saved.Id)).RecipeIngredients.ToDictionary(ri => ri.Ingredient.Name);
+        lines["Milk"].Quantity.ShouldBe(473.176m);
+        lines["Milk"].Unit.ShouldBe("ml");
+        lines["Flour"].Quantity.ShouldBe(1500m);
+        lines["Flour"].Unit.ShouldBe("g");
+        lines["Salt"].Quantity.ShouldBeNull();
+    }
+
     // ---------------------------------------------------------------- Read
 
     [Fact]

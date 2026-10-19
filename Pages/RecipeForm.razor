@@ -165,22 +165,8 @@
                     recipe.ImageContentType = contentType;
                 }
                 
-                // Convert recipe ingredients to entry format
-                ingredientEntries = existingRecipe.RecipeIngredients.Select(ri =>
-                {
-                    // Convert from base unit back to a display unit
-                    var (displayQuantity, displayUnit) = UnitConversionService.ConvertFromBaseUnit(
-                        ri.Quantity ?? 0,
-                        ri.Unit ?? UnitConversionService.BASE_COUNT_UNIT);
-
-                    return new IngredientEntry
-                    {
-                        Name = ri.Ingredient.Name,
-                        Quantity = displayQuantity,
-                        Unit = displayUnit,
-                        Modifier = ri.Modifier ?? string.Empty
-                    };
-                }).ToList();
+                // Convert stored base-unit lines into form entries
+                ingredientEntries = IngredientEntryMapper.FromRecipeIngredients(existingRecipe.RecipeIngredients);
             }
             else
             {

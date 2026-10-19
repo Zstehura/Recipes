@@ -3,7 +3,6 @@
 @using RecipesApp.Services
 @using Microsoft.AspNetCore.Components.Forms
 @inject RecipeService RecipeService
-@inject IngredientService IngredientService
 @inject RecipeImportExportService ImportExportService
 @inject IJSRuntime JSRuntime
 
@@ -398,29 +397,8 @@ Best served warm. Store in airtight container for up to 5 days.
             {
                 try
                 {
-                    // Convert RecipeIngredient objects to IngredientEntry objects
-                    var ingredientEntries = new List<IngredientEntry>();
-
-                    foreach (var ri in recipe.RecipeIngredients)
-                    {
-                        var ingredientName = ri.Ingredient.Name;
-
-                        // Check if ingredient exists, create if it doesn't
-                        var existingIngredient = await IngredientService.GetIngredientByNameAsync(ingredientName);
-
-                        // Determine the measurement unit from the stored base unit
-                        var unit = DetermineUnitFromBaseUnit(ri.Unit);
-
-                        var entry = new IngredientEntry
-                        {
-                            Name = ingredientName,
-                            Quantity = ri.Quantity,
-                            Unit = unit,
-                            Modifier = ri.Modifier ?? string.Empty
-                        };
-
-                        ingredientEntries.Add(entry);
-                    }
+                    // Convert the parsed base-unit lines into entries for RecipeService
+                    var ingredientEntries = IngredientEntryMapper.FromRecipeIngredients(recipe.RecipeIngredients);
 
                     // Clear the RecipeIngredients collection to avoid duplicate processing
                     recipe.RecipeIngredients = new List<RecipeIngredient>();
@@ -467,19 +445,6 @@ Best served warm. Store in airtight container for up to 5 days.
         parsedRecipes.Clear();
         importErrors.Clear();
         importSuccessMessage = "";
-    }
-
-    private MeasurementUnit DetermineUnitFromBaseUnit(string? baseUnit)
-    {
-        // The parsed recipes have base units (g, ml, pieces)
-        // We need to convert them back to appropriate MeasurementUnit enum values
-        return baseUnit switch
-        {
-            "g" => MeasurementUnit.Grams,
-            "ml" => MeasurementUnit.Milliliters,
-            "pieces" => MeasurementUnit.Pieces,
-            _ => MeasurementUnit.Pieces
-        };
     }
 }
 
