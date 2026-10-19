@@ -96,3 +96,7 @@ using (var scope = app.Services.CreateScope())
 
 app.Run();
 
+
+// Makes the compiler-generated Program class public so integration tests can use
+// WebApplicationFactory<Program>.
+public partial class Program { }
