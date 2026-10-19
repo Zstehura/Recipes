@@ -4,6 +4,7 @@
 **/bin/
 **/obj/
 **/TestResults/
+tests/
 
 # Source control and editor files
 .git/
