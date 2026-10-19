@@ -397,13 +397,22 @@ public class RecipeImportExportService
             var entry = ParseIngredientLine(trimmedLine);
             if (entry != null)
             {
-                // Create a temporary RecipeIngredient with just the name
-                // The actual ingredient lookup and unit conversion will be handled by RecipeService
+                // Store the quantity in its base unit (g / ml / pieces), as the database does,
+                // so "2 cups" becomes 473.176 ml rather than 2 ml.
+                decimal? quantity = null;
+                var unit = ConvertUnitToBaseUnit(entry.Unit);
+                if (entry.Quantity.HasValue)
+                {
+                    (quantity, unit) = UnitConversionService.ConvertToBaseUnit(entry.Quantity.Value, entry.Unit);
+                }
+
+                // Create a temporary RecipeIngredient with just the name.
+                // The actual ingredient lookup is handled by RecipeService.
                 var recipeIngredient = new RecipeIngredient
                 {
                     Ingredient = new Ingredient { Name = entry.Name },
-                    Quantity = entry.Quantity,
-                    Unit = ConvertUnitToBaseUnit(entry.Unit),
+                    Quantity = quantity,
+                    Unit = unit,
                     Modifier = string.IsNullOrWhiteSpace(entry.Modifier) ? null : entry.Modifier
                 };
                 recipe.RecipeIngredients.Add(recipeIngredient);

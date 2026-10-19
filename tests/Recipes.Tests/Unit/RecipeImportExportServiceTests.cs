@@ -110,13 +110,13 @@ public class RecipeImportExportServiceTests
     [InlineData("250 g flour", 250, "g", "flour")]
     [InlineData("250 grams flour", 250, "g", "flour")]
     [InlineData("100ml milk", 100, "ml", "milk")]
-    [InlineData("1.5 l water", 1.5, "ml", "water")]
+    [InlineData("1.5 l water", 1500, "ml", "water")]
     [InlineData("2 pieces eggs", 2, "pieces", "eggs")]
     [InlineData("3 eggs", 3, "pieces", "eggs")]
     [InlineData("3 large eggs", 3, "pieces", "large eggs")]
     [InlineData("2 cloves garlic", 2, "pieces", "cloves garlic")]
-    [InlineData("2 floz cream", 2, "ml", "cream")]
-    [InlineData("1 TBSP oil", 1, "ml", "oil")]
+    [InlineData("2 floz cream", 59.147, "ml", "cream")]
+    [InlineData("1 TBSP oil", 14.7868, "ml", "oil")]
     public void ParseRecipeText_IngredientLine_ParsesQuantityUnitAndName(
         string line, double expectedQuantity, string expectedBaseUnit, string expectedName)
     {
@@ -128,11 +128,11 @@ public class RecipeImportExportServiceTests
     }
 
     [Theory]
-    [InlineData("1/2 tsp salt", 0.5)]
-    [InlineData("3/4 cup sugar", 0.75)]
-    [InlineData("1 1/4 cups sugar", 1.25)]
+    [InlineData("1/2 tsp salt", 2.46446)]
+    [InlineData("3/4 cup sugar", 177.441)]
+    [InlineData("1 1/4 cups sugar", 295.735)]
     [InlineData("2 1/2 eggs", 2.5)]
-    public void ParseRecipeText_FractionQuantity_ConvertsToDecimal(string line, double expected)
+    public void ParseRecipeText_FractionQuantity_ConvertsToDecimalInBaseUnit(string line, double expected)
     {
         ParseSingleIngredient(line).Quantity.ShouldBe((decimal)expected);
     }
@@ -185,7 +185,7 @@ public class RecipeImportExportServiceTests
         recipes.ShouldHaveSingleItem().RecipeIngredients.Count.ShouldBe(2);
     }
 
-    [Theory(Skip = "Bug #9: parser stores the raw quantity with the base unit, so 2 cups becomes 2 ml")]
+    [Theory]
     [InlineData("2 cups milk", 473.176, "ml")]
     [InlineData("1 kg flour", 1000, "g")]
     [InlineData("1 tbsp oil", 14.7868, "ml")]
