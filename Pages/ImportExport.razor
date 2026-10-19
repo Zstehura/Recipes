@@ -356,13 +356,13 @@ Best served warm. Store in airtight container for up to 5 days.
         try
         {
             var file = e.File;
-            if (file.Size > 10 * 1024 * 1024) // 10MB limit
+            if (file.Size > RecipeImportExportService.MaxImportCharacters)
             {
-                importErrors.Add("File size exceeds 10MB limit.");
+                importErrors.Add($"The file is too large (limit: {RecipeImportExportService.MaxImportCharacters / 1_000_000} MB).");
                 return;
             }
 
-            using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            using var stream = file.OpenReadStream(maxAllowedSize: RecipeImportExportService.MaxImportCharacters);
             using var reader = new StreamReader(stream);
             var text = await reader.ReadToEndAsync();
 

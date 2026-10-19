@@ -337,6 +337,81 @@ public class RecipeImportExportServiceTests
         recipes.ShouldHaveSingleItem().CreatedDate.ShouldBeGreaterThanOrEqualTo(before);
     }
 
+    // ---------------------------------------------------------------- Parsing: limits and hostile input
+
+    [Fact]
+    public void ParseRecipeText_LargerThanImportLimit_ReturnsTooLargeError()
+    {
+        var text = RecipeTextBuilder.Build(notes: new string('a', RecipeImportExportService.MaxImportCharacters));
+
+        var (recipes, errors) = _service.ParseRecipeText(text);
+
+        recipes.ShouldBeEmpty();
+        errors.ShouldHaveSingleItem().ShouldStartWith("The import is too large");
+    }
+
+    [Fact]
+    public void ParseRecipeText_LargeButWithinLimit_Parses()
+    {
+        var text = RecipeTextBuilder.Build(notes: new string('a', RecipeImportExportService.MaxImportCharacters - 1000));
+
+        var (recipes, errors) = _service.ParseRecipeText(text);
+
+        errors.ShouldBeEmpty();
+        recipes.ShouldHaveSingleItem();
+    }
+
+    [Fact]
+    public void ParseRecipeText_IngredientLineAtLimit_Parses()
+    {
+        var line = "2 " + new string('x', RecipeImportExportService.MaxIngredientLineLength - 2);
+
+        var (recipes, errors) = _service.ParseRecipeText(RecipeTextBuilder.Build(ingredients: new[] { line }));
+
+        errors.ShouldBeEmpty();
+        recipes.ShouldHaveSingleItem();
+    }
+
+    [Fact]
+    public void ParseRecipeText_IngredientLineOverLimit_RejectsOnlyThatRecipe()
+    {
+        var tooLong = "2 " + new string('x', RecipeImportExportService.MaxIngredientLineLength);
+        var text = RecipeTextBuilder.Build(name: "Bad", ingredients: new[] { tooLong }) + "\n" +
+                   RecipeTextBuilder.Build(name: "Good");
+
+        var (recipes, errors) = _service.ParseRecipeText(text);
+
+        recipes.ShouldHaveSingleItem().Name.ShouldBe("Good");
+        errors.ShouldHaveSingleItem().ShouldContain("ingredient line is too long");
+    }
+
+    [Fact]
+    public void ParseRecipeText_ManyUnclosedParentheses_IsRejectedQuickly()
+    {
+        // Regression test: before the line limit, ~500 KB of " (" took about 4 seconds to parse,
+        // growing with the square of the length (a regex denial-of-service).
+        var hostileLine = "x" + string.Concat(Enumerable.Repeat(" (", 250_000));
+        var text = RecipeTextBuilder.Build(ingredients: new[] { hostileLine });
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        var (recipes, errors) = _service.ParseRecipeText(text);
+
+        stopwatch.ElapsedMilliseconds.ShouldBeLessThan(1000);
+        recipes.ShouldBeEmpty();
+        errors.ShouldHaveSingleItem().ShouldContain("ingredient line is too long");
+    }
+
+    [Fact]
+    public void ParseRecipeText_QuantityTooLargeToConvert_ReturnsError()
+    {
+        var text = RecipeTextBuilder.Build(ingredients: new[] { "79228162514264337593543950335 kg flour" });
+
+        var (recipes, errors) = _service.ParseRecipeText(text);
+
+        recipes.ShouldBeEmpty();
+        errors.ShouldHaveSingleItem().ShouldBe("Recipe #1: a quantity is too large.");
+    }
+
     // ---------------------------------------------------------------- Export
 
     private static Recipe CreateStoredRecipe() => new()

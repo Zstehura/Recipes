@@ -13,6 +13,26 @@ public class RecipeImportExportService
     private const string NotesDelimiter = "===== NOTES =====";
     private const string EndRecipeDelimiter = "===== END RECIPE =====";
 
+    /// <summary>Largest import accepted, in characters (about 1 MB of plain text).</summary>
+    public const int MaxImportCharacters = 1_000_000;
+
+    /// <summary>
+    /// Longest ingredient line accepted. Name (200) plus preparation note (100) fit easily.
+    /// The limit also keeps regex matching fast: some patterns below take time that grows with
+    /// the square of the line length on adversarial input (e.g. many unclosed parentheses).
+    /// </summary>
+    public const int MaxIngredientLineLength = 500;
+
+    // Precompiled once, each with a timeout as a backstop against pathological input
+    private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(1);
+    private static readonly Regex FirstNumberRegex = new(@"(\d+)", RegexOptions.None, RegexTimeout);
+    private static readonly Regex ModifierRegex = new(@"^(.+?)\s*\(([^)]+)\)\s*$", RegexOptions.None, RegexTimeout);
+    private static readonly Regex QuantityUnitNameRegex = new(@"^([\d\s\/\.]+)\s*(fl\s*oz|[a-zA-Z\-]+)\s+(.+)$", RegexOptions.IgnoreCase, RegexTimeout);
+    private static readonly Regex QuantityNameRegex = new(@"^([\d\s\/\.]+)\s+(.+)$", RegexOptions.None, RegexTimeout);
+    private static readonly Regex FractionRegex = new(@"^(\d+)\s*\/\s*(\d+)$", RegexOptions.None, RegexTimeout);
+    private static readonly Regex MixedFractionRegex = new(@"^(\d+)\s+(\d+)\s*\/\s*(\d+)$", RegexOptions.None, RegexTimeout);
+    private static readonly Regex WhitespaceRegex = new(@"\s+", RegexOptions.None, RegexTimeout);
+
     /// <summary>
     /// Exports a single recipe to the custom text format
     /// </summary>
@@ -166,6 +186,12 @@ public class RecipeImportExportService
             return (recipes, errors);
         }
 
+        if (text.Length > MaxImportCharacters)
+        {
+            errors.Add($"The import is too large (limit: {MaxImportCharacters / 1_000_000} MB). Split it into smaller files.");
+            return (recipes, errors);
+        }
+
         // Split by END RECIPE delimiter to handle multiple recipes
         var recipeBlocks = text.Split(new[] { EndRecipeDelimiter }, StringSplitOptions.RemoveEmptyEntries);
 
@@ -182,9 +208,17 @@ public class RecipeImportExportService
                 var recipe = ParseSingleRecipe(block, i + 1);
                 recipes.Add(recipe);
             }
-            catch (Exception ex)
+            catch (FormatException ex)
             {
                 errors.Add($"Recipe #{i + 1}: {ex.Message}");
+            }
+            catch (OverflowException)
+            {
+                errors.Add($"Recipe #{i + 1}: a quantity is too large.");
+            }
+            catch (RegexMatchTimeoutException)
+            {
+                errors.Add($"Recipe #{i + 1}: took too long to read. Check for unusually long or malformed lines.");
             }
         }
 
@@ -295,22 +329,22 @@ public class RecipeImportExportService
         // Validate required fields
         if (string.IsNullOrWhiteSpace(recipe.Name))
         {
-            throw new Exception("Missing required field: Name");
+            throw new FormatException("Missing required field: Name");
         }
 
         if (recipe.CookingTime < 1)
         {
-            throw new Exception("Missing or invalid required field: Cooking Time (must be at least 1 minute)");
+            throw new FormatException("Missing or invalid required field: Cooking Time (must be at least 1 minute)");
         }
 
         if (recipe.Servings < 1)
         {
-            throw new Exception("Missing or invalid required field: Servings (must be at least 1)");
+            throw new FormatException("Missing or invalid required field: Servings (must be at least 1)");
         }
 
         if (string.IsNullOrWhiteSpace(recipe.Instructions))
         {
-            throw new Exception("Missing required field: Instructions");
+            throw new FormatException("Missing required field: Instructions");
         }
 
         return recipe;
@@ -374,7 +408,7 @@ public class RecipeImportExportService
     private int ParseCookingTime(string value)
     {
         // Handle formats like "25 minutes", "25 min", "25"
-        var match = Regex.Match(value, @"(\d+)");
+        var match = FirstNumberRegex.Match(value);
         if (match.Success && int.TryParse(match.Groups[1].Value, out var minutes))
         {
             return minutes;
@@ -401,6 +435,12 @@ public class RecipeImportExportService
             if (string.IsNullOrWhiteSpace(trimmedLine))
             {
                 continue;
+            }
+
+            if (trimmedLine.Length > MaxIngredientLineLength)
+            {
+                throw new FormatException(
+                    $"An ingredient line is too long ({trimmedLine.Length} characters, limit {MaxIngredientLineLength}).");
             }
 
             var entry = ParseIngredientLine(trimmedLine);
@@ -435,7 +475,7 @@ public class RecipeImportExportService
     /// </summary>
     private static (string name, string modifier) ExtractModifier(string nameWithModifier)
     {
-        var match = Regex.Match(nameWithModifier, @"^(.+?)\s*\(([^)]+)\)\s*$");
+        var match = ModifierRegex.Match(nameWithModifier);
         if (match.Success)
         {
             return (match.Groups[1].Value.Trim(), match.Groups[2].Value.Trim());
@@ -448,7 +488,7 @@ public class RecipeImportExportService
         // Try to parse format with unit: "250g flour (sliced)" or "2 pieces eggs"
         // Regex: (quantity with optional fraction) (unit) (ingredient name with optional modifier)
         // The unit allows hyphens ("fl-oz"); "fl oz" is listed first because it contains a space.
-        var matchWithUnit = Regex.Match(line, @"^([\d\s\/\.]+)\s*(fl\s*oz|[a-zA-Z\-]+)\s+(.+)$", RegexOptions.IgnoreCase);
+        var matchWithUnit = QuantityUnitNameRegex.Match(line);
 
         if (matchWithUnit.Success)
         {
@@ -472,7 +512,7 @@ public class RecipeImportExportService
         }
 
         // Try to parse format without unit: "2 eggs (beaten)" (quantity + name)
-        var matchWithoutUnit = Regex.Match(line, @"^([\d\s\/\.]+)\s+(.+)$");
+        var matchWithoutUnit = QuantityNameRegex.Match(line);
         if (matchWithoutUnit.Success)
         {
             var quantityStr = matchWithoutUnit.Groups[1].Value.Trim();
@@ -506,7 +546,7 @@ public class RecipeImportExportService
     private decimal? ParseQuantity(string quantityStr)
     {
         // Handle fractions like "3/4", "1/2"
-        var fractionMatch = Regex.Match(quantityStr, @"^(\d+)\s*\/\s*(\d+)$");
+        var fractionMatch = FractionRegex.Match(quantityStr);
         if (fractionMatch.Success)
         {
             if (decimal.TryParse(fractionMatch.Groups[1].Value, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var numerator) &&
@@ -518,7 +558,7 @@ public class RecipeImportExportService
         }
 
         // Handle mixed fractions like "1 1/2", "2 3/4"
-        var mixedMatch = Regex.Match(quantityStr, @"^(\d+)\s+(\d+)\s*\/\s*(\d+)$");
+        var mixedMatch = MixedFractionRegex.Match(quantityStr);
         if (mixedMatch.Success)
         {
             if (decimal.TryParse(mixedMatch.Groups[1].Value, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var whole) &&
@@ -542,7 +582,7 @@ public class RecipeImportExportService
     private MeasurementUnit? TryParseUnit(string unitStr)
     {
         // Collapse internal whitespace so "fl  oz" matches "fl oz"
-        var unit = Regex.Replace(unitStr.Trim().ToLowerInvariant(), @"\s+", " ");
+        var unit = WhitespaceRegex.Replace(unitStr.Trim().ToLowerInvariant(), " ");
 
         return unit switch
         {
