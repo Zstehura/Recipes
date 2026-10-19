@@ -51,9 +51,12 @@ coverage*.info
 *.db-wal
 *.sqlite
 *.sqlite3
+# Backups written before a schema upgrade (see Data/DatabaseInitializer.cs)
+*.db.backup-*
 
-# Docker Compose bind-mount volume (see docker-compose.yml)
-/data/
+# Note: no folder rule for the Docker volume (data/). On case-insensitive file systems
+# (macOS, Windows) "/data/" would also match the Data/ source folder. The file patterns
+# above already cover everything the volume contains.
 
 # ----------------------------------------------------------------------------
 # OS files

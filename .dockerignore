@@ -22,6 +22,7 @@ tests/
 **/*.db
 **/*.db-shm
 **/*.db-wal
+**/*.db.backup-*
 data/
 
 # Not needed inside the image
