@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using RecipesApp.Models;
@@ -36,10 +37,18 @@ public class RecipeImportExportService
         sb.AppendLine(IngredientsDelimiter);
         foreach (var ri in recipe.RecipeIngredients.OrderBy(ri => ri.Ingredient.Name))
         {
-            var quantity = ri.Quantity ?? 0;
-            var unit = ri.Unit ?? "pieces";
             var modifier = !string.IsNullOrWhiteSpace(ri.Modifier) ? $" ({ri.Modifier})" : "";
-            sb.AppendLine($"{quantity}{unit} {ri.Ingredient.Name}{modifier}");
+
+            // No quantity (e.g. "salt to taste"): write just the name so it re-imports without one
+            if (ri.Quantity is not decimal quantity)
+            {
+                sb.AppendLine($"{ri.Ingredient.Name}{modifier}");
+                continue;
+            }
+
+            // Invariant culture: always "473.176", never "473,176", so files are portable
+            var unit = ri.Unit ?? "pieces";
+            sb.AppendLine($"{quantity.ToString(CultureInfo.InvariantCulture)}{unit} {ri.Ingredient.Name}{modifier}");
         }
         sb.AppendLine();
 
@@ -375,7 +384,7 @@ public class RecipeImportExportService
 
     private DateTime? TryParseDate(string dateStr)
     {
-        if (DateTime.TryParse(dateStr, out var date))
+        if (DateTime.TryParse(dateStr, CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
         {
             return date;
         }
@@ -500,8 +509,8 @@ public class RecipeImportExportService
         var fractionMatch = Regex.Match(quantityStr, @"^(\d+)\s*\/\s*(\d+)$");
         if (fractionMatch.Success)
         {
-            if (decimal.TryParse(fractionMatch.Groups[1].Value, out var numerator) &&
-                decimal.TryParse(fractionMatch.Groups[2].Value, out var denominator) &&
+            if (decimal.TryParse(fractionMatch.Groups[1].Value, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var numerator) &&
+                decimal.TryParse(fractionMatch.Groups[2].Value, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var denominator) &&
                 denominator != 0)
             {
                 return numerator / denominator;
@@ -512,9 +521,9 @@ public class RecipeImportExportService
         var mixedMatch = Regex.Match(quantityStr, @"^(\d+)\s+(\d+)\s*\/\s*(\d+)$");
         if (mixedMatch.Success)
         {
-            if (decimal.TryParse(mixedMatch.Groups[1].Value, out var whole) &&
-                decimal.TryParse(mixedMatch.Groups[2].Value, out var numerator) &&
-                decimal.TryParse(mixedMatch.Groups[3].Value, out var denominator) &&
+            if (decimal.TryParse(mixedMatch.Groups[1].Value, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var whole) &&
+                decimal.TryParse(mixedMatch.Groups[2].Value, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var numerator) &&
+                decimal.TryParse(mixedMatch.Groups[3].Value, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var denominator) &&
                 denominator != 0)
             {
                 return whole + (numerator / denominator);
@@ -522,7 +531,7 @@ public class RecipeImportExportService
         }
 
         // Handle regular decimal numbers
-        if (decimal.TryParse(quantityStr, out var quantity))
+        if (decimal.TryParse(quantityStr, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var quantity))
         {
             return quantity;
         }
@@ -567,6 +576,6 @@ public class RecipeImportExportService
 
     private string FormatDate(DateTime date)
     {
-        return date.ToString("yyyy-MM-dd");
+        return date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
     }
 }

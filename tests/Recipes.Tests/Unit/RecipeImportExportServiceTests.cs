@@ -394,6 +394,43 @@ public class RecipeImportExportServiceTests
     }
 
     [Fact]
+    public void ExportRecipeToText_IngredientWithoutQuantity_WritesNameOnly()
+    {
+        var recipe = CreateStoredRecipe();
+        recipe.RecipeIngredients.Add(new RecipeIngredient
+        {
+            Ingredient = new Ingredient { Name = "Salt" },
+            Modifier = "to taste",
+        });
+
+        var lines = _service.ExportRecipeToText(recipe).Split(Environment.NewLine);
+
+        lines.ShouldContain("Salt (to taste)");
+    }
+
+    [Theory]
+    [InlineData("de-DE")]
+    [InlineData("fr-FR")]
+    [InlineData("th-TH")]
+    public void ExportRecipeToText_AnyCulture_UsesInvariantNumbersAndDates(string culture)
+    {
+        var originalCulture = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentCulture = new CultureInfo(culture);
+
+            var lines = _service.ExportRecipeToText(CreateStoredRecipe()).Split(Environment.NewLine);
+
+            lines.ShouldContain("473.176ml Milk");
+            lines.ShouldContain("Created: 2024-01-15");
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = originalCulture;
+        }
+    }
+
+    [Fact]
     public void ExportRecipeToText_NoTagsOrNotes_OmitsThoseSections()
     {
         var recipe = CreateStoredRecipe();
@@ -462,7 +499,7 @@ public class RecipeImportExportServiceTests
         recipes.Select(r => r.Name).ShouldBe(new[] { "Apple Pie", "Banana Bread" });
     }
 
-    [Fact(Skip = "Bug #5: a missing quantity is exported as '0pieces' and re-imported as 0")]
+    [Fact]
     public void ExportThenImport_IngredientWithoutQuantity_StaysWithoutQuantity()
     {
         var recipe = CreateStoredRecipe();
@@ -474,7 +511,7 @@ public class RecipeImportExportServiceTests
             .Single(ri => ri.Ingredient.Name == "Salt").Quantity.ShouldBeNull();
     }
 
-    [Fact(Skip = "Bug #5: numbers use the current culture, so '473,176ml' breaks under de-DE")]
+    [Fact]
     public void ExportThenImport_NonEnglishCulture_RoundTripsDecimalQuantities()
     {
         var originalCulture = CultureInfo.CurrentCulture;
