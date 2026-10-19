@@ -164,24 +164,23 @@ public class GroceryListServiceTests
     }
 
     [Fact]
-    public void BuildGroceryList_NoQuantity_ShowsTraceAmount()
-    {
-        // Documents current behavior; see the skipped test below for the intended output.
-        var recipes = new List<Recipe> { CreateRecipe(1, ("Salt", null, null, null)) };
-
-        var list = GroceryListService.BuildGroceryList(recipes, new() { [1] = 1 });
-
-        ItemLines(list).ShouldBe(new[] { "- Salt (trace amount)" });
-    }
-
-    [Fact(Skip = "Bug #7: an ingredient with no quantity (e.g. 'salt to taste') is labeled 'trace amount'")]
     public void BuildGroceryList_NoQuantity_ListsNameOnly()
     {
-        var recipes = new List<Recipe> { CreateRecipe(1, ("Salt", null, null, null)) };
+        var recipes = new List<Recipe> { CreateRecipe(1, ("Salt", null, null, "to taste")) };
 
         var list = GroceryListService.BuildGroceryList(recipes, new() { [1] = 1 });
 
-        ItemLines(list).ShouldBe(new[] { "- Salt" });
+        ItemLines(list).ShouldBe(new[] { "- Salt (to taste)" });
+    }
+
+    [Fact]
+    public void BuildGroceryList_QuantityBelowDisplayPrecision_ShowsTraceAmount()
+    {
+        var recipes = new List<Recipe> { CreateRecipe(1, ("Saffron", 0.004m, "g", null)) };
+
+        var list = GroceryListService.BuildGroceryList(recipes, new() { [1] = 1 });
+
+        ItemLines(list).ShouldBe(new[] { "- Saffron (trace amount)" });
     }
 
     [Theory]

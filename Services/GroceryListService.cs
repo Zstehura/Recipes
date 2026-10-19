@@ -137,8 +137,13 @@ public class GroceryListService
             // Format quantity with up to 2 decimal places, removing trailing zeros
             var quantityStr = displayQuantity.ToString("0.##");
 
-            // Handle zero or very small quantities
-            if (displayQuantity == 0 || displayQuantity < 0.01m)
+            // No quantity (e.g. "salt to taste"): list the name only
+            if (displayQuantity == 0)
+            {
+                lines.Add($"- {ingredient.DisplayName}");
+            }
+            // Too small to show at two decimal places
+            else if (displayQuantity < 0.01m)
             {
                 lines.Add($"- {ingredient.DisplayName} (trace amount)");
             }
