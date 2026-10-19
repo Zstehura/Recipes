@@ -39,7 +39,7 @@ public class UnitConversionService
         // Convert back to a reasonable display unit for better readability
         return baseUnit switch
         {
-            BASE_WEIGHT_UNIT => quantity >= 1000 
+            BASE_WEIGHT_UNIT => quantity >= 1000
                 ? (quantity / 1000m, MeasurementUnit.Kilograms)
                 : (quantity, MeasurementUnit.Grams),
             BASE_VOLUME_UNIT => quantity >= 1000

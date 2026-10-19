@@ -106,7 +106,7 @@ public class IngredientService
         {
             // Check if the recipe already has the target ingredient
             var existingRecipeIngredient = await _context.RecipeIngredients
-                .FirstOrDefaultAsync(ri => ri.RecipeId == recipeIngredient.RecipeId && 
+                .FirstOrDefaultAsync(ri => ri.RecipeId == recipeIngredient.RecipeId &&
                                           ri.IngredientId == targetId);
 
             if (existingRecipeIngredient != null)
@@ -126,10 +126,10 @@ public class IngredientService
                     Unit = recipeIngredient.Unit,
                     Modifier = recipeIngredient.Modifier
                 };
-                
+
                 // Remove the old recipe ingredient
                 _context.RecipeIngredients.Remove(recipeIngredient);
-                
+
                 // Add the new recipe ingredient
                 _context.RecipeIngredients.Add(newRecipeIngredient);
             }
@@ -141,7 +141,7 @@ public class IngredientService
         // Verify no RecipeIngredients still reference the source ingredient
         var remainingRecipeIngredients = await _context.RecipeIngredients
             .AnyAsync(ri => ri.IngredientId == sourceId);
-        
+
         if (remainingRecipeIngredients)
         {
             // If there are still references, something went wrong
@@ -152,14 +152,14 @@ public class IngredientService
         _context.Entry(sourceIngredient).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
         var ingredientToRemove = await _context.Ingredients
             .FirstOrDefaultAsync(i => i.Id == sourceId);
-        
+
         if (ingredientToRemove != null)
         {
             // Remove the source ingredient
             _context.Ingredients.Remove(ingredientToRemove);
             await _context.SaveChangesAsync();
         }
-        
+
         return true;
     }
 

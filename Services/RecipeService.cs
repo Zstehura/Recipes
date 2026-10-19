@@ -66,13 +66,13 @@ public class RecipeService : IRecipeReader
     {
         recipe.CreatedDate = DateTime.Now;
         recipe.ModifiedDate = DateTime.Now;
-        
+
         // Clear any existing recipe ingredients
         recipe.RecipeIngredients.Clear();
-        
+
         // Process ingredients
         await ProcessIngredientsAsync(recipe, ingredientEntries);
-        
+
         _context.Recipes.Add(recipe);
         await _context.SaveChangesAsync();
         return recipe;
@@ -84,7 +84,7 @@ public class RecipeService : IRecipeReader
             .Include(r => r.RecipeIngredients)
                 .ThenInclude(ri => ri.Ingredient)
             .FirstOrDefaultAsync(r => r.Id == recipe.Id);
-            
+
         if (existingRecipe == null)
             return null;
 
@@ -95,7 +95,7 @@ public class RecipeService : IRecipeReader
         existingRecipe.Tags = recipe.Tags;
         existingRecipe.Notes = recipe.Notes;
         existingRecipe.ModifiedDate = DateTime.Now;
-        
+
         // Update or remove image
         if (removeImage)
         {
@@ -208,8 +208,8 @@ public class RecipeService : IRecipeReader
         if (tags != null && tags.Any())
         {
             var lowerTags = tags.Select(t => t.ToLower().Trim()).ToList();
-            query = query.Where(r => !string.IsNullOrWhiteSpace(r.Tags) && 
-                lowerTags.Any(tag => 
+            query = query.Where(r => !string.IsNullOrWhiteSpace(r.Tags) &&
+                lowerTags.Any(tag =>
                     r.Tags.ToLower().Contains("," + tag + ",") ||
                     r.Tags.ToLower().StartsWith(tag + ",") ||
                     r.Tags.ToLower().EndsWith("," + tag) ||
@@ -351,8 +351,8 @@ public class RecipeService : IRecipeReader
         if (tags != null && tags.Any())
         {
             var lowerTags = tags.Select(t => t.ToLower().Trim()).ToList();
-            query = query.Where(r => !string.IsNullOrWhiteSpace(r.Tags) && 
-                lowerTags.Any(tag => 
+            query = query.Where(r => !string.IsNullOrWhiteSpace(r.Tags) &&
+                lowerTags.Any(tag =>
                     r.Tags.ToLower().Contains("," + tag + ",") ||
                     r.Tags.ToLower().StartsWith(tag + ",") ||
                     r.Tags.ToLower().EndsWith("," + tag) ||
@@ -436,7 +436,7 @@ public class RecipeService : IRecipeReader
             .Where(r => r.Id == recipeId)
             .Select(r => new { r.ImageData, r.ImageContentType })
             .FirstOrDefaultAsync();
-            
+
         return recipe != null ? (recipe.ImageData, recipe.ImageContentType) : (null, null);
     }
 
