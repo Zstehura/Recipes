@@ -11,7 +11,7 @@
 
 <PageTitle>@(recipe.Id > 0 ? "Edit Recipe" : "New Recipe")</PageTitle>
 
-<h1>@(recipe.Id > 0 ? "Edit Recipe" : "New Recipe")</h1>
+<h1 class="h3 mb-3">@(recipe.Id > 0 ? "Edit recipe" : "New recipe")</h1>
 
 <DraftNotice SavedAt="restoredDraftSavedAt"
              Note="@(Id > 0 ? "Photo changes aren't kept in drafts." : "Photos aren't kept in drafts.")"
@@ -23,135 +23,146 @@
     </div>
 }
 
-<EditForm Model="@recipe" OnValidSubmit="@HandleValidSubmit">
+<EditForm Model="@recipe" OnValidSubmit="@HandleValidSubmit" class="recipe-form">
     <DataAnnotationsValidator />
-    <ValidationSummary class="text-danger" />
 
-    <div class="row">
-        <div class="col-md-8">
-            <div class="mb-3">
-                <label class="form-label" for="name">Recipe Name *</label>
-                <InputText id="name" class="form-control" @bind-Value="recipe.Name" />
-                <ValidationMessage For="@(() => recipe.Name)" />
-            </div>
+    <div class="mb-3">
+        <label class="form-label" for="name">Recipe name</label>
+        <InputText id="name" class="form-control" @bind-Value="recipe.Name" />
+        <ValidationMessage For="@(() => recipe.Name)" />
+    </div>
 
-            <div class="mb-3">
-                <label class="form-label" for="image">Background Image (Optional)</label>
-                <InputFile id="image" class="form-control" OnChange="HandleImageUpload" accept="image/jpeg,image/png,image/gif,image/webp" />
-                <small class="form-text text-muted">Maximum size: 10MB. Supported formats: @ImageValidator.SupportedFormatsDescription</small>
-                @if (!string.IsNullOrEmpty(imageError))
-                {
-                    <div class="text-danger small mt-1">@imageError</div>
-                }
-                @if (recipe.ImageContentType != null)
-                {
-                    <div class="mt-2">
-                        <small class="text-success">Image uploaded successfully</small>
-                        <button type="button" class="btn btn-sm btn-outline-danger ms-2" @onclick="RemoveImage">
-                            Remove Image
+    <div class="row g-2 mb-3">
+        <div class="col-6">
+            <label class="form-label" for="cookingTime">Cooking time (min)</label>
+            <InputNumber id="cookingTime" class="form-control" inputmode="numeric" @bind-Value="recipe.CookingTime" />
+            <ValidationMessage For="@(() => recipe.CookingTime)" />
+        </div>
+        <div class="col-6">
+            <label class="form-label" for="servings">Servings</label>
+            <InputNumber id="servings" class="form-control" inputmode="numeric" @bind-Value="recipe.Servings" />
+            <ValidationMessage For="@(() => recipe.Servings)" />
+        </div>
+    </div>
+
+    <fieldset class="mb-3">
+        <legend class="form-label">Ingredients</legend>
+        <ul class="ingredient-rows">
+            @for (int i = 0; i < ingredientEntries.Count; i++)
+            {
+                var index = i;
+                var entry = ingredientEntries[index];
+                var number = index + 1;
+                var isLast = index == ingredientEntries.Count - 1;
+                <li class="ingredient-row">
+                    <div class="ingredient-row-amount">
+                        <div>
+                            <label class="visually-hidden" for="ing-@index-qty">Ingredient @number amount</label>
+                            @if (isLast)
+                            {
+                                <InputNumber id="@($"ing-{index}-qty")" class="form-control" inputmode="decimal" placeholder="Amount"
+                                             @bind-Value="entry.Quantity" @ref="lastQuantityInput" />
+                            }
+                            else
+                            {
+                                <InputNumber id="@($"ing-{index}-qty")" class="form-control" inputmode="decimal" placeholder="Amount"
+                                             @bind-Value="entry.Quantity" />
+                            }
+                        </div>
+                        <div>
+                            <label class="visually-hidden" for="ing-@index-unit">Ingredient @number unit</label>
+                            <InputSelect id="@($"ing-{index}-unit")" class="form-select" @bind-Value="entry.Unit">
+                                @foreach (var unit in Enum.GetValues<MeasurementUnit>())
+                                {
+                                    <option value="@unit">@UnitConversionService.GetUnitDisplayName(unit)</option>
+                                }
+                            </InputSelect>
+                        </div>
+                        <button type="button" class="btn btn-outline-danger ingredient-remove"
+                                aria-label="@($"Remove ingredient {number}{(string.IsNullOrWhiteSpace(entry.Name) ? "" : ": " + entry.Name)}")"
+                                @onclick="() => RemoveIngredient(index)">
+                            <span class="bi bi-trash" aria-hidden="true"></span>
                         </button>
                     </div>
-                }
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">Ingredients *</label>
-                <div class="ingredients-list">
-                    @for (int i = 0; i < ingredientEntries.Count; i++)
-                    {
-                        var index = i;
-                        <div class="ingredient-entry">
-                            <div class="row align-items-end g-2">
-                                <div class="col-6 col-md-2">
-                                    <label class="form-label small">Quantity</label>
-                                    <InputNumber class="form-control form-control-sm"
-                                        @bind-Value="ingredientEntries[index].Quantity"
-                                        placeholder="0" />
-                                </div>
-                                <div class="col-6 col-md-2">
-                                    <label class="form-label small">Unit</label>
-                                    <InputSelect class="form-select form-select-sm"
-                                        @bind-Value="ingredientEntries[index].Unit">
-                                        @foreach (var unit in Enum.GetValues<MeasurementUnit>())
-                                        {
-                                            <option value="@unit">@UnitConversionService.GetUnitDisplayName(unit)</option>
-                                        }
-                                    </InputSelect>
-                                </div>
-                                <div class="col-6 col-md-3">
-                                    <label class="form-label small">Ingredient Name</label>
-                                    <InputText class="form-control form-control-sm"
-                                        @bind-Value="ingredientEntries[index].Name"
-                                        placeholder="e.g., flour" />
-                                </div>
-                                <div class="col-4 col-md-3">
-                                    <label class="form-label small">Modifier</label>
-                                    <InputText class="form-control form-control-sm"
-                                        @bind-Value="ingredientEntries[index].Modifier"
-                                        placeholder="e.g., sliced, diced" />
-                                </div>
-                                <div class="col-2 col-md-1">
-                                    <label class="form-label small d-block d-md-none">&nbsp;</label>
-                                    <button type="button" class="btn btn-sm btn-outline-danger w-100"
-                                        @onclick="() => RemoveIngredient(index)" title="Remove">
-                                        <span class="bi bi-trash"></span>
-                                    </button>
-                                </div>
-                            </div>
+                    <div class="ingredient-row-name">
+                        <div>
+                            <label class="visually-hidden" for="ing-@index-name">Ingredient @number name</label>
+                            <InputText id="@($"ing-{index}-name")" class="form-control" placeholder="Ingredient, e.g. flour"
+                                       @bind-Value="entry.Name" />
                         </div>
-                    }
-                    @if (ingredientEntries.Count == 0)
-                    {
-                        <div class="text-danger small mb-2">At least one ingredient is required</div>
-                    }
-                </div>
-                <button type="button" class="btn btn-sm btn-outline-primary mt-2" @onclick="AddIngredient">
-                    <span class="bi bi-plus"></span> Add Ingredient
-                </button>
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label" for="instructions">Instructions *</label>
-                <InputTextArea id="instructions" class="form-control" rows="8" @bind-Value="recipe.Instructions" />
-                <ValidationMessage For="@(() => recipe.Instructions)" />
-            </div>
-
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label" for="cookingTime">Cooking Time (minutes) *</label>
-                    <InputNumber id="cookingTime" class="form-control" @bind-Value="recipe.CookingTime" />
-                    <ValidationMessage For="@(() => recipe.CookingTime)" />
-                </div>
-
-                <div class="col-md-6 mb-3">
-                    <label class="form-label" for="servings">Servings *</label>
-                    <InputNumber id="servings" class="form-control" @bind-Value="recipe.Servings" />
-                    <ValidationMessage For="@(() => recipe.Servings)" />
-                </div>
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label" for="tags">Tags</label>
-                <InputText id="tags" class="form-control" @bind-Value="recipe.Tags" />
-                <small class="form-text text-muted">Separate tags with commas (e.g., Italian, Vegetarian, Quick)</small>
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label" for="notes">Notes</label>
-                <InputTextArea id="notes" class="form-control" rows="4" @bind-Value="recipe.Notes" />
-                <small class="form-text text-muted">Any additional notes or tips about this recipe</small>
-            </div>
-
-            @if (!string.IsNullOrEmpty(saveError))
-            {
-                <div class="alert alert-danger" role="alert">@saveError</div>
+                        <div>
+                            <label class="visually-hidden" for="ing-@index-prep">Ingredient @number preparation</label>
+                            <InputText id="@($"ing-{index}-prep")" class="form-control" placeholder="Prep, e.g. diced"
+                                       @bind-Value="entry.Modifier" />
+                        </div>
+                    </div>
+                </li>
             }
+        </ul>
+        @if (ingredientEntries.Count == 0)
+        {
+            <p class="text-danger small mb-2">Add at least one ingredient.</p>
+        }
+        <button type="button" class="btn btn-outline-primary w-100" @onclick="AddIngredientAndFocus">
+            <span class="bi bi-plus-lg" aria-hidden="true"></span> Add ingredient
+        </button>
+    </fieldset>
 
-            <div class="mb-3">
-                <button type="submit" class="btn btn-primary me-2">Save Recipe</button>
-                <button type="button" class="btn btn-secondary" @onclick="CancelAsync">Cancel</button>
-            </div>
+    <div class="mb-3">
+        <label class="form-label" for="instructions">Instructions</label>
+        <InputTextArea id="instructions" class="form-control" rows="8" aria-describedby="instructions-help"
+                       @bind-Value="recipe.Instructions" />
+        <div id="instructions-help" class="form-text">One step per line.</div>
+        <ValidationMessage For="@(() => recipe.Instructions)" />
+    </div>
+
+    @* Optional fields: out of the way for a new recipe, open when there's something in them *@
+    <details class="form-extras mb-3" open="@HasExtras">
+        <summary>More details <span class="text-muted">(tags, notes, photo)</span></summary>
+
+        <div class="mb-3">
+            <label class="form-label" for="tags">Tags</label>
+            <InputText id="tags" class="form-control" aria-describedby="tags-help" @bind-Value="recipe.Tags" />
+            <div id="tags-help" class="form-text">Separate tags with commas, e.g. Italian, Vegetarian, Quick</div>
         </div>
+
+        <div class="mb-3">
+            <label class="form-label" for="notes">Notes</label>
+            <InputTextArea id="notes" class="form-control" rows="4" @bind-Value="recipe.Notes" />
+        </div>
+
+        <div class="mb-0">
+            <label class="form-label" for="image">Photo</label>
+            @if (recipe.ImageContentType != null)
+            {
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="text-success small"><span class="bi bi-check-circle" aria-hidden="true"></span> Photo added</span>
+                    <button type="button" class="btn btn-outline-danger btn-sm" @onclick="RemoveImage">Remove photo</button>
+                </div>
+            }
+            <InputFile id="image" class="form-control" OnChange="HandleImageUpload" accept="image/jpeg,image/png,image/gif,image/webp"
+                       aria-describedby="image-help" />
+            <div id="image-help" class="form-text">Up to 10MB. @ImageValidator.SupportedFormatsDescription</div>
+            @if (!string.IsNullOrEmpty(imageError))
+            {
+                <div class="text-danger small mt-1" role="alert">@imageError</div>
+            }
+        </div>
+    </details>
+
+    @* Errors sit just above the Save button, where you are when you press it *@
+    <div role="alert">
+        <ValidationSummary class="text-danger" />
+        @if (!string.IsNullOrEmpty(saveError))
+        {
+            <div class="alert alert-danger">@saveError</div>
+        }
+    </div>
+
+    <div class="action-bar">
+        <span class="action-bar-status"></span>
+        <button type="button" class="btn btn-outline-secondary" @onclick="CancelAsync">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save recipe</button>
     </div>
 </EditForm>
 
@@ -170,6 +181,13 @@
     private DateTimeOffset? restoredDraftSavedAt;
     private bool staleDraftDiscarded;
     private bool imageRemoved = false;
+
+    // After "Add ingredient", the new row's first field gets focus
+    private InputNumber<decimal?>? lastQuantityInput;
+    private bool focusNewIngredient;
+
+    private bool HasExtras => !string.IsNullOrWhiteSpace(recipe.Tags) || !string.IsNullOrWhiteSpace(recipe.Notes)
+        || recipe.ImageContentType != null;
 
     protected override async Task OnInitializedAsync()
     {
@@ -213,6 +231,12 @@
             // is interactive, so drafts are restored here rather than in OnInitializedAsync
             await RestoreDraftAsync();
             return;
+        }
+
+        if (focusNewIngredient && lastQuantityInput?.Element is ElementReference newRow)
+        {
+            focusNewIngredient = false;
+            await newRow.FocusAsync();
         }
 
         // After every render, save the form as a draft if anything changed
@@ -278,6 +302,12 @@
         { 
             Unit = MeasurementUnit.Pieces 
         });
+    }
+
+    private void AddIngredientAndFocus()
+    {
+        AddIngredient();
+        focusNewIngredient = true;
     }
 
     private void RemoveIngredient(int index)
