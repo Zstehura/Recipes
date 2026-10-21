@@ -1,0 +1,38 @@
+@* One recipe in a list. The whole card is a single link to the recipe, so it's one big tap target. *@
+<a class="recipe-item" href="recipe/@Recipe.Id">
+    <div class="recipe-item-image">
+        @if (Recipe.ImageContentType != null)
+        {
+            @* The name is right next to it, so the photo is decorative for screen readers *@
+            <img src="api/recipe/@Recipe.Id/image" alt="" loading="lazy" />
+        }
+        else
+        {
+            <span class="bi bi-egg-fried" aria-hidden="true"></span>
+        }
+    </div>
+    <div class="recipe-item-body">
+        <h2 class="recipe-item-title">@Recipe.Name</h2>
+        <p class="recipe-item-meta">
+            <span class="bi bi-clock" aria-hidden="true"></span> @Recipe.CookingTime min
+            <span class="ms-2 bi bi-people" aria-hidden="true"></span> @Recipe.Servings @(Recipe.Servings == 1 ? "serving" : "servings")
+        </p>
+        @{
+            var tags = RecipeTags.Parse(Recipe.Tags);
+        }
+        @if (tags.Count > 0)
+        {
+            <ul class="recipe-item-tags" aria-label="Tags">
+                @foreach (var tag in tags)
+                {
+                    <li>@tag</li>
+                }
+            </ul>
+        }
+    </div>
+</a>
+
+@code {
+    [Parameter, EditorRequired]
+    public Recipe Recipe { get; set; } = default!;
+}

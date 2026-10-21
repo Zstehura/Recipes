@@ -1,0 +1,100 @@
+@* Cooking time, servings, and tag filters. The owning page holds the values (State) and
+   re-runs its search when OnChanged fires. *@
+<div id="@Id" class="filter-panel card card-body mb-3">
+    <fieldset class="mb-3">
+        <legend class="form-label">Cooking time (minutes)</legend>
+        <div class="row g-2">
+            <div class="col-6">
+                <label for="@Id-cook-min" class="visually-hidden">Shortest cooking time</label>
+                <input id="@Id-cook-min" type="number" inputmode="numeric" class="form-control" placeholder="Min" min="1"
+                       @bind="State.MinCookTime" @bind:event="onchange" @bind:after="NotifyChanged" />
+            </div>
+            <div class="col-6">
+                <label for="@Id-cook-max" class="visually-hidden">Longest cooking time</label>
+                <input id="@Id-cook-max" type="number" inputmode="numeric" class="form-control" placeholder="Max" min="1"
+                       @bind="State.MaxCookTime" @bind:event="onchange" @bind:after="NotifyChanged" />
+            </div>
+        </div>
+    </fieldset>
+
+    <fieldset class="mb-3">
+        <legend class="form-label">Servings</legend>
+        <div class="row g-2">
+            <div class="col-6">
+                <label for="@Id-serv-min" class="visually-hidden">Fewest servings</label>
+                <input id="@Id-serv-min" type="number" inputmode="numeric" class="form-control" placeholder="Min" min="1"
+                       @bind="State.MinServings" @bind:event="onchange" @bind:after="NotifyChanged" />
+            </div>
+            <div class="col-6">
+                <label for="@Id-serv-max" class="visually-hidden">Most servings</label>
+                <input id="@Id-serv-max" type="number" inputmode="numeric" class="form-control" placeholder="Max" min="1"
+                       @bind="State.MaxServings" @bind:event="onchange" @bind:after="NotifyChanged" />
+            </div>
+        </div>
+    </fieldset>
+
+    <fieldset class="mb-3">
+        <legend class="form-label">Tags</legend>
+        @if (AvailableTags.Count == 0)
+        {
+            <p class="text-muted small mb-0">No tags yet. Add them when you edit a recipe.</p>
+        }
+        else
+        {
+            <div class="d-flex flex-wrap gap-2">
+                @foreach (var tag in AvailableTags)
+                {
+                    var selected = State.Tags.Contains(tag);
+                    <button type="button" class="tag-chip" aria-pressed="@(selected ? "true" : "false")"
+                            @onclick="() => ToggleTagAsync(tag)">
+                        @if (selected)
+                        {
+                            <span class="bi bi-check-lg" aria-hidden="true"></span>
+                        }
+                        @tag
+                    </button>
+                }
+            </div>
+        }
+    </fieldset>
+
+    @if (CanClear)
+    {
+        <div>
+            <button type="button" class="btn btn-outline-secondary" @onclick="OnClear">
+                <span class="bi bi-x-lg" aria-hidden="true"></span> Clear all
+            </button>
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>Element id, also used to make the inputs' ids unique on the page.</summary>
+    [Parameter, EditorRequired]
+    public string Id { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public RecipeFilterState State { get; set; } = default!;
+
+    [Parameter]
+    public IReadOnlyList<string> AvailableTags { get; set; } = Array.Empty<string>();
+
+    [Parameter]
+    public EventCallback OnChanged { get; set; }
+
+    /// <summary>The page decides what "Clear all" resets (the recipe list also clears its search).</summary>
+    [Parameter]
+    public EventCallback OnClear { get; set; }
+
+    /// <summary>Whether there's anything for "Clear all" to reset.</summary>
+    [Parameter]
+    public bool CanClear { get; set; }
+
+    private Task NotifyChanged() => OnChanged.InvokeAsync();
+
+    private Task ToggleTagAsync(string tag)
+    {
+        State.ToggleTag(tag);
+        return OnChanged.InvokeAsync();
+    }
+}

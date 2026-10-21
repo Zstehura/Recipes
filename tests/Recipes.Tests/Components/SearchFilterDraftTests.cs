@@ -15,7 +15,7 @@ public sealed class SearchFilterDraftTests : ComponentTestBase
         Db.SeedRecipe("Pancakes");
         var cut = Render<RecipesApp.Pages.Index>();
 
-        cut.Find("input[placeholder='Search recipes...']").Input("pan");
+        cut.Find("#recipe-search").Input("pan");
 
         cut.WaitForAssertion(() => HasDraft(RecipeFilters.RecipeListKey, DraftLifetime.Tab).ShouldBeTrue());
         HasDraft(RecipeFilters.RecipeListKey, DraftLifetime.Device).ShouldBeFalse();
@@ -31,10 +31,8 @@ public sealed class SearchFilterDraftTests : ComponentTestBase
 
         var cut = Render<RecipesApp.Pages.Index>();
 
-        cut.WaitForAssertion(() =>
-            cut.Find("input[placeholder='Search recipes...']").GetAttribute("value").ShouldBe("lasag"));
-        cut.FindAll("h5.card-title").Select(h => h.TextContent.Trim())
-            .Where(t => t != "Filter Recipes").ShouldBe(new[] { "Lasagna" });
+        cut.WaitForAssertion(() => cut.Find("#recipe-search").GetAttribute("value").ShouldBe("lasag"));
+        cut.FindAll(".recipe-item-title").Select(h => h.TextContent.Trim()).ShouldBe(new[] { "Lasagna" });
     }
 
     // ---------------------------------------------------------------- Search by ingredients
