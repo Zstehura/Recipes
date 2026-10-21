@@ -157,7 +157,7 @@ Services/        Business logic:
 Services/Drafts/ Unsaved page state kept in encrypted browser storage (DraftService, IDraftStore)
 Pages/           Blazor pages, plus the error page
 Shared/          Layout and navigation
-wwwroot/         Static assets (CSS, Bootstrap)
+wwwroot/         Static assets (CSS, JS; Bootstrap and Bootstrap Icons in lib/)
 tests/           xUnit test project (see Testing)
 .github/         CI, CodeQL, and Dependabot configuration
 ```
@@ -234,7 +234,7 @@ Alternatives considered:
 - **Response headers:** `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, and `Referrer-Policy: no-referrer`.
 - **Data protection keys:** stored in `data/keys` next to the database, readable only by the container's user. They encrypt drafts and Blazor's circuit IDs. On Linux they aren't encrypted at rest, so protect the data folder the same way as the database.
 - **Container:** multi-stage build, a chiseled runtime image with no shell or package manager, a non-root user, and app files that the app user can read but not modify.
-- **Supply chain:** GitHub Actions are pinned to commit SHAs with least-privilege permissions, CodeQL scans the code and workflows, and Dependabot keeps NuGet packages, actions, and base images up to date.
+- **Supply chain:** GitHub Actions are pinned to commit SHAs with least-privilege permissions, CodeQL scans the code and workflows, and Dependabot keeps NuGet packages, actions, and base images up to date. Bootstrap and Bootstrap Icons are served from `wwwroot/lib` rather than a CDN, so pages don't load third-party code or need internet access. Dependabot doesn't track these files, so they're updated by hand (taken from the npm package and checked against the registry's integrity hash).
 
 ## Known limitations
 
