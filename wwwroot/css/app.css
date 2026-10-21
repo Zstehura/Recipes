@@ -84,37 +84,6 @@ h1:focus {
     content: "An error has occurred."
 }
 
-.recipe-card {
-    transition: transform 0.2s, box-shadow 0.2s;
-    border: 1px solid #dee2e6;
-}
-
-.recipe-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-.ingredients-list {
-    background-color: #f8f9fa;
-    padding: 0.75rem;
-    border-radius: 0.25rem;
-    border-left: 4px solid #1b6ec2;
-}
-
-.ingredient-item {
-    padding: 0.5rem 0;
-    border-bottom: 1px solid #dee2e6;
-}
-
-.ingredient-item:last-child {
-    border-bottom: none;
-}
-
-.instructions-text {
-    line-height: 1.8;
-    white-space: pre-wrap;
-}
-
 .notes-text {
     background-color: #fff3cd;
     padding: 1rem;
@@ -328,20 +297,12 @@ h1:focus {
         padding-top: 0.75rem;
     }
 
-    /* Reduce padding in ingredient list */
-    .ingredients-list {
-        padding: 0.5rem;
-    }
 
     /* Stack columns on mobile */
     .row > [class*="col-"] {
         margin-bottom: 0.75rem;
     }
 
-    /* Better spacing for recipe cards */
-    .recipe-card .card-footer {
-        padding: 0.75rem;
-    }
 
     /* Modal improvements */
     .modal-dialog {
@@ -557,7 +518,8 @@ h1:focus {
     border-radius: 999px;
 }
 
-.tag-chip[aria-pressed="true"] {
+.tag-chip[aria-pressed="true"],
+.tag-chip.is-selected {
     color: #fff;
     background-color: #1b6ec2;
     border-color: #1b6ec2;
@@ -901,4 +863,19 @@ h1:focus {
 .form-extras[open] summary {
     margin-bottom: 0.75rem;
     border-bottom: 1px solid #dee2e6;
+}
+
+/* Search by ingredients (Pages/SearchByIngredients.razor) */
+.ingredient-picker {
+    max-height: 50vh;
+    margin: 0 0 0.5rem;
+    padding: 0 0.75rem;
+    overflow-y: auto;
+    list-style: none;
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+}
+
+.ingredient-picker li + li {
+    border-top: 1px solid #e9ecef;
 }

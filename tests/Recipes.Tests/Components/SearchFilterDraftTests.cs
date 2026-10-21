@@ -67,7 +67,7 @@ public sealed class SearchFilterDraftTests : ComponentTestBase
         var cut = Render<SearchByIngredients>();
 
         cut.WaitForAssertion(() => cut.Find($"#ingredient-{eggsId}").HasAttribute("checked").ShouldBeTrue());
-        cut.FindAll("h5.card-title").Select(h => h.TextContent.Trim())
-            .Where(t => t != "Filter Recipes").Order().ShouldBe(new[] { "Omelette", "Pancakes" });
+        cut.FindAll(".recipe-item-title").Select(h => h.TextContent.Trim()).Order()
+            .ShouldBe(new[] { "Omelette", "Pancakes" });
     }
 }
