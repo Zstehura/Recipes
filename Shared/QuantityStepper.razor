@@ -1,0 +1,36 @@
+@* A number you change with big − and + buttons instead of typing (no keyboard popping up). *@
+<div class="stepper" role="group" aria-label="@Label">
+    <button type="button" class="stepper-btn" aria-label="Decrease" disabled="@(Value <= Min)"
+            @onclick="() => SetAsync(Value - 1)">
+        <span class="bi bi-dash-lg" aria-hidden="true"></span>
+    </button>
+    <output class="stepper-value" aria-live="polite">@Value×</output>
+    <button type="button" class="stepper-btn" aria-label="Increase" disabled="@(Value >= Max)"
+            @onclick="() => SetAsync(Value + 1)">
+        <span class="bi bi-plus-lg" aria-hidden="true"></span>
+    </button>
+</div>
+
+@code {
+    /// <summary>What the number is, for screen readers (e.g. "Batches of Pancakes").</summary>
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = default!;
+
+    [Parameter]
+    public int Value { get; set; }
+
+    [Parameter]
+    public EventCallback<int> ValueChanged { get; set; }
+
+    [Parameter]
+    public int Min { get; set; } = 1;
+
+    [Parameter]
+    public int Max { get; set; } = 10;
+
+    private Task SetAsync(int value)
+    {
+        var clamped = Math.Clamp(value, Min, Max);
+        return clamped == Value ? Task.CompletedTask : ValueChanged.InvokeAsync(clamped);
+    }
+}

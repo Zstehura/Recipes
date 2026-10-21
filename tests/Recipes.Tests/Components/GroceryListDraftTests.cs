@@ -7,6 +7,11 @@ namespace Recipes.Tests.Components;
 
 public sealed class GroceryListDraftTests : ComponentTestBase
 {
+    public GroceryListDraftTests()
+    {
+        JSInterop.Mode = JSRuntimeMode.Loose;   // share/copy support checks
+    }
+
     [Fact]
     public void SelectingARecipe_SavesDraft()
     {
@@ -25,7 +30,7 @@ public sealed class GroceryListDraftTests : ComponentTestBase
         var cut = Render<GroceryList>();
         cut.Find($"#recipe-{id}").Change(true);
 
-        cut.FindAll("button").Single(b => b.TextContent.Contains("Generate List")).Click();
+        cut.FindAll("button").Single(b => b.TextContent.Contains("Make list")).Click();
 
         // Synchronous check of the stored draft: WaitForAssertion takes an Action, and an async
         // lambda there would become async void and could never fail the test
@@ -34,7 +39,7 @@ public sealed class GroceryListDraftTests : ComponentTestBase
     }
 
     [Fact]
-    public async Task OpeningThePage_WithDraft_RestoresSelectionAndGeneratedList()
+    public async Task OpeningThePage_WithDraft_ShowsTheListFirst_AndKeepsTheSelection()
     {
         var id = Db.SeedRecipe("Pancakes", "Flour", "Eggs");
         await Drafts.SaveAsync(GroceryListDraft.Key, new GroceryListDraft(
@@ -48,9 +53,13 @@ public sealed class GroceryListDraftTests : ComponentTestBase
 
         var cut = Render<GroceryList>();
 
-        cut.WaitForAssertion(() => cut.Find($"#recipe-{id}").HasAttribute("checked").ShouldBeTrue());
-        cut.Markup.ShouldContain("3 x Pancakes");
-        cut.Find("textarea").TextContent.ShouldContain("3 piece(s) Flour");
+        cut.WaitForAssertion(() => cut.Find(".grocery-text").TextContent.ShouldContain("3 piece(s) Flour"));
+        cut.Markup.ShouldContain("3 × Pancakes");
+
+        cut.FindAll("button").Single(b => b.TextContent.Contains("Change recipes")).Click();
+
+        cut.Find($"#recipe-{id}").HasAttribute("checked").ShouldBeTrue();
+        cut.Find(".stepper-value").TextContent.ShouldBe("3×");
     }
 
     [Fact]
@@ -61,7 +70,7 @@ public sealed class GroceryListDraftTests : ComponentTestBase
         cut.Find($"#recipe-{id}").Change(true);
         cut.WaitForAssertion(() => HasDraft(GroceryListDraft.Key).ShouldBeTrue());
 
-        cut.FindAll("button").Single(b => b.TextContent.Contains("Clear Selection")).Click();
+        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Clear").Click();
 
         cut.WaitForAssertion(() => HasDraft(GroceryListDraft.Key).ShouldBeFalse());
     }

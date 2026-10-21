@@ -739,3 +739,128 @@ h1:focus {
     justify-content: flex-end;
     gap: 0.5rem;
 }
+
+/* Grocery list (Pages/GroceryList.razor) */
+.pick-list {
+    display: grid;
+    gap: 0.5rem;
+    margin: 0 0 1rem;
+    padding: 0;
+    list-style: none;
+}
+
+.pick-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-right: 0.5rem;
+    background-color: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+}
+
+.pick-row.selected {
+    background-color: #f0f6fd;
+    border-color: #1b6ec2;
+}
+
+/* The label is the whole row, so a tap anywhere on it toggles the checkbox */
+.pick-row-main {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 60px;
+    min-width: 0;
+    padding: 0.5rem 0 0.5rem 0.75rem;
+    cursor: pointer;
+}
+
+.pick-row-main .form-check-input {
+    flex: none;
+    width: 1.35rem;
+    height: 1.35rem;
+    margin: 0;
+}
+
+.pick-row-name {
+    display: block;
+    font-weight: 600;
+}
+
+.pick-row-meta {
+    display: block;
+    color: #5c636a;
+    font-size: 0.875rem;
+}
+
+.stepper {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.stepper-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    color: #1b6ec2;
+    background-color: #fff;
+    border: 1px solid #1b6ec2;
+    border-radius: 50%;
+}
+
+.stepper-btn:disabled {
+    color: #adb5bd;
+    border-color: #dee2e6;
+}
+
+.stepper-btn:focus-visible {
+    outline: 3px solid #86b7fe;
+    outline-offset: 2px;
+}
+
+.stepper-value {
+    min-width: 2.25rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+/* A bar of actions that stays at the bottom of the screen (above the bottom nav on phones) */
+.action-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 1010;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 -1rem;
+    padding: 0.75rem 1rem;
+    background-color: #fff;
+    border-top: 1px solid #dee2e6;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.action-bar-status {
+    flex: 1;
+    color: #5c636a;
+    font-size: 0.9rem;
+}
+
+@media (max-width: 767.98px) {
+    .action-bar {
+        bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom));
+    }
+}
+
+.grocery-text {
+    padding: 1rem;
+    font-size: 1.1rem;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    background-color: #f8f9fa;
+    border-radius: 0.5rem;
+}
