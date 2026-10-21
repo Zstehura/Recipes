@@ -3,6 +3,8 @@
 @using RecipesApp.Services
 @inject RecipeService RecipeService
 @inject NavigationManager Navigation
+@inject DraftService Drafts
+@inject ILogger<RecipeDetail> Logger
 
 <PageTitle>@(recipe?.Name ?? "Recipe")</PageTitle>
 
@@ -12,109 +14,119 @@
 }
 else
 {
-    <div class="mb-3 d-flex flex-column flex-sm-row gap-2">
-        <a href="/" class="btn btn-outline-secondary">
-            <span class="bi bi-arrow-left"></span> Back to Recipes
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <a href="" class="btn btn-outline-secondary">
+            <span class="bi bi-arrow-left" aria-hidden="true"></span> Recipes
         </a>
-        <a href="/recipe/@recipe.Id/edit" class="btn btn-primary">
-            <span class="bi bi-pencil"></span> Edit Recipe
-        </a>
+        <OverflowMenu Label="Recipe actions">
+            <a class="overflow-menu-item" href="recipe/@recipe.Id/edit">
+                <span class="bi bi-pencil" aria-hidden="true"></span> Edit recipe
+            </a>
+            <button type="button" class="overflow-menu-item text-danger" @onclick="() => confirmingDelete = true">
+                <span class="bi bi-trash" aria-hidden="true"></span> Delete recipe
+            </button>
+        </OverflowMenu>
     </div>
 
-    <div class="card">
+    @if (!string.IsNullOrEmpty(deleteError))
+    {
+        <div class="alert alert-danger" role="alert">@deleteError</div>
+    }
+
+    <article class="cooking-view">
         @if (recipe.ImageContentType != null)
         {
-            <img src="/api/recipe/@recipe.Id/image" alt="@recipe.Name" class="card-img-top" style="max-height: 400px; object-fit: cover; width: 100%;" />
+            <img src="api/recipe/@recipe.Id/image" alt="" class="cooking-image" />
         }
-        <div class="card-header">
-            <h1 class="mb-0">@recipe.Name</h1>
-        </div>
-        <div class="card-body">
-            <div class="row mb-3 g-2">
-                <div class="col-12 col-md-6">
-                    <p class="mb-1">
-                        <strong><span class="bi bi-clock"></span> Cooking Time:</strong> @recipe.CookingTime minutes
-                    </p>
-                </div>
-                <div class="col-12 col-md-6">
-                    <p class="mb-1">
-                        <strong><span class="bi bi-people"></span> Servings:</strong> @recipe.Servings
-                    </p>
-                </div>
-            </div>
 
-            @if (!string.IsNullOrEmpty(recipe.Tags))
-            {
-                <div class="mb-3">
-                    <strong>Tags:</strong>
-                    @foreach (var tag in recipe.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        <h1>@recipe.Name</h1>
+        <p class="cooking-meta">
+            <span class="bi bi-clock" aria-hidden="true"></span> @recipe.CookingTime min
+            <span class="ms-3 bi bi-people" aria-hidden="true"></span> @recipe.Servings @(recipe.Servings == 1 ? "serving" : "servings")
+        </p>
+        @{
+            var tags = RecipeTags.Parse(recipe.Tags);
+        }
+        @if (tags.Count > 0)
+        {
+            <ul class="recipe-item-tags mb-4" aria-label="Tags">
+                @foreach (var tag in tags)
+                {
+                    <li>@tag</li>
+                }
+            </ul>
+        }
+
+        <section class="mb-4" aria-labelledby="ingredients-heading">
+            <div class="d-flex align-items-baseline justify-content-between gap-2">
+                <h2 id="ingredients-heading">Ingredients</h2>
+                @if (done.Count > 0)
+                {
+                    <button type="button" class="btn btn-link p-0" @onclick="UncheckAll">Uncheck all</button>
+                }
+            </div>
+            <p class="text-muted small mb-2">Tap an ingredient to cross it off.</p>
+            <ul class="ingredient-checklist">
+                @foreach (var line in recipe.RecipeIngredients)
+                {
+                    var isDone = done.Contains(line.Id);
+                    var name = IngredientService.NormalizeName(line.Ingredient.Name);
+                    var modifier = string.IsNullOrWhiteSpace(line.Modifier) ? "" : $" ({line.Modifier})";
+                    <li @key="line.Id">
+                        <label class="ingredient-check @(isDone ? "done" : "")">
+                            <input type="checkbox" class="form-check-input" checked="@isDone" @onchange="() => ToggleDone(line.Id)" />
+                            <span>
+                                @if (line.Quantity.HasValue && !string.IsNullOrWhiteSpace(line.Unit))
+                                {
+                                    // Stored in base units; shown in a readable unit. Counts read better
+                                    // without one: "2 Eggs", not "2 piece(s) Eggs".
+                                    var (quantity, unit) = UnitConversionService.ConvertFromBaseUnit(line.Quantity.Value, line.Unit);
+                                    var amount = unit == MeasurementUnit.Pieces
+                                        ? quantity.ToString("0.##")
+                                        : $"{quantity:0.##} {UnitConversionService.GetUnitDisplayName(unit)}";
+                                    <strong>@amount</strong>
+                                    @(" ")
+                                }
+                                @name@modifier
+                            </span>
+                        </label>
+                    </li>
+                }
+            </ul>
+        </section>
+
+        <section class="mb-4" aria-labelledby="instructions-heading">
+            <h2 id="instructions-heading">Instructions</h2>
+            <div class="cooking-steps">
+                @foreach (var step in recipe.Instructions.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                {
+                    <p>@step</p>
+                }
+            </div>
+        </section>
+
+        @if (!string.IsNullOrEmpty(recipe.Notes))
+        {
+            <section class="mb-4" aria-labelledby="notes-heading">
+                <h2 id="notes-heading">Notes</h2>
+                <div class="notes-text">
+                    @foreach (var note in recipe.Notes.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                     {
-                        <span class="badge bg-secondary me-1">@tag</span>
+                        <p>@note</p>
                     }
                 </div>
-            }
+            </section>
+        }
 
-            <div class="mb-4">
-                <h3>Ingredients</h3>
-                <div class="ingredients-list">
-                    @foreach (var recipeIngredient in recipe.RecipeIngredients)
-                    {
-                        <div class="ingredient-item">
-                            @{
-                                var ingredientDisplayName = IngredientService.NormalizeName(recipeIngredient.Ingredient.Name);
-                                var modifierDisplay = !string.IsNullOrWhiteSpace(recipeIngredient.Modifier) ? $" ({recipeIngredient.Modifier})" : "";
-                            }
-                            @if (recipeIngredient.Quantity.HasValue && !string.IsNullOrWhiteSpace(recipeIngredient.Unit))
-                            {
-                                // Convert from base unit to display unit
-                                var (displayQuantity, displayUnit) = UnitConversionService.ConvertFromBaseUnit(
-                                    recipeIngredient.Quantity.Value,
-                                    recipeIngredient.Unit);
-                                <strong>@displayQuantity.ToString("0.##") @UnitConversionService.GetUnitDisplayName(displayUnit) </strong> @ingredientDisplayName@modifierDisplay
-                            }
-                            else
-                            {
-                                @ingredientDisplayName@modifierDisplay
-                            }
-                        </div>
-                    }
-                </div>
-            </div>
+        <p class="text-muted small">
+            Added @recipe.CreatedDate.ToString("MMM d, yyyy") · Updated @recipe.ModifiedDate.ToString("MMM d, yyyy")
+        </p>
+    </article>
 
-            <div class="mb-4">
-                <h3>Instructions</h3>
-                <div class="instructions-text">
-                    @foreach (var instruction in recipe.Instructions.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-                    {
-                        <p>@instruction</p>
-                    }
-                </div>
-            </div>
-
-            @if (!string.IsNullOrEmpty(recipe.Notes))
-            {
-                <div class="mb-3">
-                    <h4>Notes</h4>
-                    <div class="notes-text">
-                        @foreach (var note in recipe.Notes.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-                        {
-                            <p>@note</p>
-                        }
-                    </div>
-                </div>
-            }
-
-            <div class="text-muted small mt-4">
-                <p>Created: @recipe.CreatedDate.ToString("MMMM dd, yyyy")</p>
-                <p>Last Modified: @recipe.ModifiedDate.ToString("MMMM dd, yyyy")</p>
-            </div>
-        </div>
-        <div class="card-footer">
-            <button class="btn btn-danger" @onclick="DeleteRecipe">
-                <span class="bi bi-trash"></span> Delete Recipe
-            </button>
-        </div>
-    </div>
+    <ConfirmDialog Open="confirmingDelete" Title="Delete this recipe?" ConfirmLabel="Delete recipe"
+                   OnConfirm="DeleteRecipeAsync" OnCancel="() => confirmingDelete = false">
+        <p class="mb-0">"@recipe.Name" will be deleted. This can't be undone.</p>
+    </ConfirmDialog>
 }
 
 @code {
@@ -122,6 +134,12 @@ else
     public int Id { get; set; }
 
     private Recipe? recipe;
+    private bool confirmingDelete;
+    private string? deleteError;
+
+    // Crossed-off ingredients, kept for this tab so they survive switching apps mid-recipe
+    private HashSet<int> done = new();
+    private DraftAutosave<CookingProgress>? autosave;
 
     protected override async Task OnInitializedAsync()
     {
@@ -132,12 +150,72 @@ else
         }
     }
 
-    private async Task DeleteRecipe()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (await RecipeService.DeleteRecipeAsync(Id))
+        if (recipe == null)
         {
-            Navigation.NavigateTo("/");
+            return;
+        }
+
+        // Restore once the recipe has loaded (not on the first render: the load may still be running)
+        if (autosave == null)
+        {
+            await RestoreProgressAsync(recipe);
+            return;
+        }
+
+        await autosave.SaveIfChangedAsync(CookingProgress.Capture(recipe, done));
+    }
+
+    private async Task RestoreProgressAsync(Recipe loaded)
+    {
+        autosave = new DraftAutosave<CookingProgress>(Drafts, CookingProgress.KeyFor(loaded.Id), DraftLifetime.Tab);
+        var baseline = CookingProgress.Capture(loaded, Array.Empty<int>());
+
+        var saved = await Drafts.RestoreAsync<CookingProgress>(autosave.Key, DraftLifetime.Tab);
+        if (saved != null && saved.Value.IsStaleFor(loaded))
+        {
+            await Drafts.DiscardAsync(autosave.Key, DraftLifetime.Tab);
+        }
+        else if (saved != null)
+        {
+            var lineIds = loaded.RecipeIngredients.Select(l => l.Id).ToHashSet();
+            done = saved.Value.DoneIngredientIds.Where(lineIds.Contains).ToHashSet();
+        }
+
+        autosave.Start(baseline);
+        StateHasChanged();
+    }
+
+    private void ToggleDone(int lineId)
+    {
+        if (!done.Remove(lineId))
+        {
+            done.Add(lineId);
         }
     }
-}
 
+    private void UncheckAll() => done.Clear();
+
+    private async Task DeleteRecipeAsync()
+    {
+        try
+        {
+            // False means it was already gone (deleted on another device), which is fine too
+            await RecipeService.DeleteRecipeAsync(Id);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to delete recipe {RecipeId}", Id);
+            confirmingDelete = false;
+            deleteError = "The recipe couldn't be deleted. Please try again.";
+            return;
+        }
+
+        if (autosave != null)
+        {
+            await autosave.ClearAsync();
+        }
+        Navigation.NavigateTo("/");
+    }
+}

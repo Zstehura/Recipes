@@ -1,0 +1,65 @@
+@inject IJSRuntime JS
+
+@* Asks the user to confirm something that can't be undone. It's a native <dialog> opened as a
+   modal, so the browser keeps focus inside it, closes it on Escape, and makes the page behind it
+   inert. Cancel has focus when it opens, so pressing Enter by accident is safe. *@
+<dialog @ref="dialog" class="confirm-dialog" aria-labelledby="@titleId" @onclose="OnDialogClosed">
+    <h2 id="@titleId" class="h5">@Title</h2>
+    <div class="mb-3">@ChildContent</div>
+    <div class="confirm-dialog-actions">
+        <button type="button" class="btn btn-outline-secondary" autofocus disabled="@busy" @onclick="OnCancel">Cancel</button>
+        <button type="button" class="btn btn-danger" disabled="@busy" @onclick="ConfirmAsync">@ConfirmLabel</button>
+    </div>
+</dialog>
+
+@code {
+    /// <summary>The owning page opens and closes the dialog by setting this.</summary>
+    [Parameter]
+    public bool Open { get; set; }
+
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = default!;
+
+    [Parameter]
+    public string ConfirmLabel { get; set; } = "Delete";
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public EventCallback OnConfirm { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    private readonly string titleId = $"confirm-{Guid.NewGuid():N}";
+    private ElementReference dialog;
+    private bool shownOpen;
+    private bool busy;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Showing a modal needs the browser, so it happens after rendering, and only when Open changed
+        if (Open != shownOpen)
+        {
+            shownOpen = Open;
+            await JS.InvokeVoidAsync(Open ? "appDialog.show" : "appDialog.close", dialog);
+        }
+    }
+
+    private async Task ConfirmAsync()
+    {
+        busy = true;   // no double-tap while the action runs
+        try
+        {
+            await OnConfirm.InvokeAsync();
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    // The browser closed the dialog itself (Escape). If the page still thinks it's open, that's a Cancel.
+    private Task OnDialogClosed() => Open ? OnCancel.InvokeAsync() : Task.CompletedTask;
+}

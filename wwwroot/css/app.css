@@ -603,3 +603,139 @@ h1:focus {
     background-color: #f8f9fa;
     border-radius: 0.5rem;
 }
+
+/* Recipe detail: the cooking view (Pages/RecipeDetail.razor), readable at arm's length */
+.cooking-view {
+    max-width: 720px;
+    font-size: 1.125rem;
+    line-height: 1.7;
+}
+
+.cooking-view h1 {
+    margin-bottom: 0.25rem;
+    font-size: 1.75rem;
+    font-weight: 600;
+}
+
+.cooking-view h2 {
+    margin-bottom: 0.5rem;
+    font-size: 1.3rem;
+    font-weight: 600;
+}
+
+.cooking-image {
+    display: block;
+    width: 100%;
+    max-height: 260px;
+    margin-bottom: 1rem;
+    object-fit: cover;
+    border-radius: 0.5rem;
+}
+
+.cooking-meta {
+    margin-bottom: 0.5rem;
+    color: #5c636a;
+    font-size: 1rem;
+}
+
+.cooking-steps p {
+    margin-bottom: 1rem;
+}
+
+.ingredient-checklist {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.ingredient-checklist li + li {
+    border-top: 1px solid #e9ecef;
+}
+
+.ingredient-check {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    min-height: 48px;
+    padding: 0.625rem 0;
+    cursor: pointer;
+}
+
+.ingredient-check .form-check-input {
+    flex: none;
+    width: 1.35rem;
+    height: 1.35rem;
+    margin-top: 0.2rem;
+}
+
+.ingredient-check.done span {
+    color: #6c757d;
+    text-decoration: line-through;
+}
+
+/* Overflow menu (Shared/OverflowMenu.razor) */
+.overflow-menu {
+    position: relative;
+}
+
+.overflow-menu-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1040;
+}
+
+.overflow-menu-items {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 0.25rem);
+    z-index: 1041;
+    min-width: 12rem;
+    padding: 0.25rem 0;
+    background-color: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+.overflow-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    min-height: 48px;
+    padding: 0 1rem;
+    color: #212529;
+    text-align: left;
+    text-decoration: none;
+    background: none;
+    border: 0;
+}
+
+.overflow-menu-item:hover,
+.overflow-menu-item:focus-visible {
+    background-color: #f1f3f5;
+}
+
+.overflow-menu-item:focus-visible {
+    outline: 3px solid #86b7fe;
+    outline-offset: -3px;
+}
+
+/* Confirmation dialog (Shared/ConfirmDialog.razor) */
+.confirm-dialog {
+    width: min(26rem, calc(100% - 2rem));
+    padding: 1.25rem;
+    border: 0;
+    border-radius: 0.75rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+
+.confirm-dialog::backdrop {
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.confirm-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}

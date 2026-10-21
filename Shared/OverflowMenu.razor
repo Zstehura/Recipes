@@ -1,0 +1,42 @@
+@* A "⋯" button that shows a short list of secondary actions. Choosing an item, tapping outside,
+   or pressing Escape closes it. *@
+<div class="overflow-menu" @onkeydown="OnKeyDownAsync">
+    <button @ref="toggle" type="button" class="btn btn-outline-secondary" aria-label="@Label"
+            aria-expanded="@(open ? "true" : "false")" aria-controls="@menuId" @onclick="Toggle">
+        <span class="bi bi-three-dots" aria-hidden="true"></span>
+    </button>
+    @if (open)
+    {
+        <div class="overflow-menu-backdrop" @onclick="Close"></div>
+        @* Clicks on an item bubble up to here, so any choice closes the menu *@
+        <div id="@menuId" class="overflow-menu-items" @onclick="Close">
+            @ChildContent
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>What the button is for, read out by screen readers (it only shows an icon).</summary>
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = default!;
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private readonly string menuId = $"menu-{Guid.NewGuid():N}";
+    private ElementReference toggle;
+    private bool open;
+
+    private void Toggle() => open = !open;
+
+    private void Close() => open = false;
+
+    private async Task OnKeyDownAsync(KeyboardEventArgs e)
+    {
+        if (open && e.Key == "Escape")
+        {
+            open = false;
+            await toggle.FocusAsync();   // back to where the keyboard user was
+        }
+    }
+}
