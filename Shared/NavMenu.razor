@@ -1,53 +1,36 @@
 @inject NavigationManager Navigation
 @implements IDisposable
 
-<div class="nav-scrollable">
-    <div class="nav-header px-3 py-3">
-        <h2 class="nav-title">Recipes App</h2>
-    </div>
-    <nav class="flex-column">
-        <div class="nav-item px-3">
-            <button class="nav-button @(IsActiveRoute("/") ? "active" : "")" @onclick="@(() => NavigateTo("/"))">
-                <span class="bi bi-list-ul" aria-hidden="true"></span> All Recipes
-            </button>
-        </div>
-        <div class="nav-item px-3">
-            <button class="nav-button @(IsActiveRoute("/search-by-ingredients") ? "active" : "")" @onclick="@(() => NavigateTo("/search-by-ingredients"))">
-                <span class="bi bi-search" aria-hidden="true"></span> Search by Ingredients
-            </button>
-        </div>
-        <div class="nav-item px-3">
-            <button class="nav-button @(IsActiveRoute("/grocery-list") ? "active" : "")" @onclick="@(() => NavigateTo("/grocery-list"))">
-                <span class="bi bi-cart" aria-hidden="true"></span> Grocery List
-            </button>
-        </div>
-        <div class="nav-item px-3">
-            <button class="nav-button @(IsActiveRoute("/recipe/new") ? "active" : "")" @onclick="@(() => NavigateTo("/recipe/new"))">
-                <span class="bi bi-plus-circle" aria-hidden="true"></span> New Recipe
-            </button>
-        </div>
-        <div class="nav-item px-3">
-            <button class="nav-button @(IsActiveRoute("/ingredients") ? "active" : "")" @onclick="@(() => NavigateTo("/ingredients"))">
-                <span class="bi bi-list-check" aria-hidden="true"></span> Ingredients
-            </button>
-        </div>
-        <div class="nav-item px-3">
-            <button class="nav-button @(IsActiveRoute("/import-export") ? "active" : "")" @onclick="@(() => NavigateTo("/import-export"))">
-                <span class="bi bi-arrow-left-right" aria-hidden="true"></span> Import/Export
-            </button>
-        </div>
-    </nav>
-</div>
+@* Wider screens: every page as a link in the header *@
+<nav class="top-nav d-none d-md-flex" aria-label="Main">
+    @NavLinkItem("", "Recipes", "bi-book", current == NavSection.Recipes)
+    @NavLinkItem("search-by-ingredients", "Find by ingredient", "bi-search", current == NavSection.Find)
+    @NavLinkItem("grocery-list", "Grocery list", "bi-cart", current == NavSection.Grocery)
+    @NavLinkItem("ingredients", "Ingredients", "bi-list-check", current == NavSection.Ingredients)
+    @NavLinkItem("import-export", "Import/Export", "bi-arrow-left-right", current == NavSection.ImportExport)
+</nav>
+
+@* Phones: four items in a bar along the bottom, within thumb reach *@
+<nav class="bottom-nav d-md-none" aria-label="Main">
+    @NavLinkItem("", "Recipes", "bi-book", current == NavSection.Recipes)
+    @NavLinkItem("search-by-ingredients", "Find", "bi-search", current == NavSection.Find)
+    @NavLinkItem("grocery-list", "Grocery", "bi-cart", current == NavSection.Grocery)
+    @NavLinkItem("more", "More", "bi-three-dots", AppNav.IsUnderMore(current))
+</nav>
 
 @code {
+    private NavSection current;
+
     protected override void OnInitialized()
     {
+        current = AppNav.SectionFor(Navigation.ToBaseRelativePath(Navigation.Uri));
         Navigation.LocationChanged += OnLocationChanged;
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
-        StateHasChanged();
+        current = AppNav.SectionFor(Navigation.ToBaseRelativePath(e.Location));
+        InvokeAsync(StateHasChanged);
     }
 
     public void Dispose()
@@ -55,27 +38,11 @@
         Navigation.LocationChanged -= OnLocationChanged;
     }
 
-    private string GetCurrentUri()
-    {
-        var uri = Navigation.ToBaseRelativePath(Navigation.Uri);
-        return "/" + uri.TrimStart('/');
-    }
-
-    private bool IsActiveRoute(string route)
-    {
-        var currentUri = GetCurrentUri();
-        
-        if (route == "/")
-        {
-            return currentUri == "/" || string.IsNullOrEmpty(currentUri.TrimStart('/'));
-        }
-        
-        return currentUri.Equals(route, StringComparison.OrdinalIgnoreCase) ||
-               currentUri.StartsWith(route + "/", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private void NavigateTo(string route)
-    {
-        Navigation.NavigateTo(route);
-    }
+    // Real links (not buttons) so they can be long-pressed or opened in a new tab, and
+    // aria-current tells screen readers which page this is
+    private RenderFragment NavLinkItem(string href, string label, string icon, bool active) =>
+        @<a href="@href" class="nav-link-item @(active ? "active" : "")" aria-current="@(active ? "page" : null)">
+            <span class="bi @icon" aria-hidden="true"></span>
+            <span class="nav-label">@label</span>
+        </a>;
 }
