@@ -113,6 +113,34 @@ public sealed class RecipeImageEndpointTests : IDisposable
         body.ShouldContain("Something went wrong");
         body.ShouldNotContain("SqliteException");
         body.ShouldNotContain("no such table");
+        await ShouldAllLoadAsync(client, body, "/Error");
+    }
+
+    [Fact]
+    public async Task HostPage_EveryLinkedFile_Loads()
+    {
+        var client = _factory.CreateClient();
+        var body = await client.GetStringAsync("/");
+
+        await ShouldAllLoadAsync(client, body, "/");
+    }
+
+    // Every stylesheet, script, icon, and manifest a page links to must exist, so moving a file
+    // can't silently leave a page unstyled (the error page once pointed at a removed stylesheet)
+    private static async Task ShouldAllLoadAsync(HttpClient client, string html, string page)
+    {
+        var urls = System.Text.RegularExpressions.Regex
+            .Matches(html, "<(?:link|script)\\b[^>]*?\\b(?:href|src)=\"([^\"]+)\"")
+            .Select(m => m.Groups[1].Value)
+            .Where(u => !u.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        urls.ShouldNotBeEmpty();
+
+        foreach (var url in urls)
+        {
+            var response = await client.GetAsync(url.StartsWith('/') ? url : "/" + url);
+            response.StatusCode.ShouldBe(HttpStatusCode.OK, $"{page} links to {url}");
+        }
     }
 
     [Fact]
