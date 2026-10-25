@@ -83,4 +83,14 @@ public class ConfirmDialogTests : BunitContext
 
         cancelled.ShouldBe(0);
     }
+
+    [Fact]
+    public void CanConfirmFalse_DisablesOnlyTheConfirmButton()
+    {
+        var cut = RenderDialog(open: true);
+        cut.Render(p => p.Add(d => d.CanConfirm, false));
+
+        cut.Find("button.btn-danger").HasAttribute("disabled").ShouldBeTrue();
+        cut.Find("button[autofocus]").HasAttribute("disabled").ShouldBeFalse();
+    }
 }

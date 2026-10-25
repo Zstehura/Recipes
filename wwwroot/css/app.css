@@ -639,6 +639,7 @@ h1:focus {
     padding: 0 1rem;
     color: #212529;
     text-align: left;
+    white-space: nowrap;
     text-decoration: none;
     background: none;
     border: 0;
@@ -878,4 +879,55 @@ h1:focus {
 
 .ingredient-picker li + li {
     border-top: 1px solid #e9ecef;
+}
+
+/* Ingredients management (Pages/Ingredients.razor) */
+.manage-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+}
+
+.manage-row {
+    padding: 0.5rem 0.5rem 0.5rem 1rem;
+}
+
+.manage-row + .manage-row {
+    border-top: 1px solid #e9ecef;
+}
+
+.manage-row-summary {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.manage-row-main {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.manage-row-name {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.manage-row-meta {
+    color: #5c636a;
+    font-size: 0.875rem;
+}
+
+.manage-row-edit {
+    margin: 0.5rem 0.5rem 0.25rem 0;
+}
+
+.manage-row-edit-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
 }
