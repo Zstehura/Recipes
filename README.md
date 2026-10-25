@@ -1,10 +1,12 @@
-# Recipes
+# Home Recipe Repo
 
 [![CI](https://github.com/Zstehura/Recipes/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Zstehura/Recipes/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/Zstehura/Recipes/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/Zstehura/Recipes/actions/workflows/codeql.yml)
 [![codecov](https://codecov.io/gh/Zstehura/Recipes/branch/main/graph/badge.svg)](https://codecov.io/gh/Zstehura/Recipes)
 
-A self-hosted recipe manager built with .NET 10, Blazor Server, and SQLite. Store your recipes, manage a shared ingredient library, generate a combined grocery list, and find recipes by what you have on hand. It runs as a single Docker container on a home server.
+Home Recipe Repo is a self-hosted recipe manager built with .NET 10, Blazor Server, and SQLite. Store your recipes, manage a shared ingredient library, generate a combined grocery list, and find recipes by what you have on hand. It runs as a single Docker container on a home server.
+
+The app was renamed from "Recipes" to Home Recipe Repo. The repository, solution, project, and C# namespace (`RecipesApp`) keep the original name, since renaming them would touch every file for no change users can see.
 
 ## Contents
 

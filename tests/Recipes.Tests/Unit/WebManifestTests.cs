@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using System.Text.Json;
+using RecipesApp.Shared;
 using Shouldly;
 
 namespace Recipes.Tests.Unit;
@@ -42,6 +43,15 @@ public class WebManifestTests
         manifest.GetProperty("short_name").GetString()!.Length.ShouldBeLessThanOrEqualTo(12);   // fits under a home-screen icon
         manifest.GetProperty("start_url").GetString().ShouldNotBeNullOrWhiteSpace();
         manifest.GetProperty("display").GetString().ShouldBe("standalone");
+    }
+
+    [Fact]
+    public void Names_MatchAppInfo()
+    {
+        var manifest = ReadManifest();
+
+        manifest.GetProperty("name").GetString().ShouldBe(AppInfo.Name);
+        manifest.GetProperty("short_name").GetString().ShouldBe(AppInfo.ShortName);
     }
 
     [Fact]

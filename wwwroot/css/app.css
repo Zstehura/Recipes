@@ -107,10 +107,12 @@ h1:focus {
 }
 
 .app-brand {
+    flex-shrink: 0;
     color: #fff;
     font-size: 1.25rem;
     font-weight: 600;
     text-decoration: none;
+    white-space: nowrap;
 }
 
 .app-brand:hover {
@@ -141,6 +143,22 @@ h1:focus {
     padding: 0 0.75rem;
     border-radius: 0.375rem;
     color: rgba(255, 255, 255, 0.85);
+    white-space: nowrap;
+}
+
+/* Between tablet and laptop width the brand and five links only fit without the icons */
+@media (max-width: 1099.98px) {
+    .top-nav {
+        gap: 0;
+    }
+
+    .top-nav .nav-link-item {
+        padding: 0 0.5rem;
+    }
+
+    .top-nav .nav-link-item .bi {
+        display: none;
+    }
 }
 
 .top-nav .nav-link-item:hover {

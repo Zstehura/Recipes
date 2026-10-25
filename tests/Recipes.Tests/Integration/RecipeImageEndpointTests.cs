@@ -117,6 +117,19 @@ public sealed class RecipeImageEndpointTests : IDisposable
     }
 
     [Fact]
+    public async Task HostPage_UsesTheAppName()
+    {
+        var client = _factory.CreateClient();
+
+        var body = await client.GetStringAsync("/");
+
+        body.ShouldContain("<title>Home Recipe Repo</title>");
+        body.ShouldContain("class=\"app-brand\" href>Home Recipe Repo</a>");   // the header brand
+        body.ShouldContain("<meta name=\"apple-mobile-web-app-title\" content=\"Recipe Repo\" />");
+        body.ShouldNotContain("Recipes App");
+    }
+
+    [Fact]
     public async Task HostPage_EveryLinkedFile_Loads()
     {
         var client = _factory.CreateClient();

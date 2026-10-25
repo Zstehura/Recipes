@@ -9,7 +9,7 @@
 @inject ILogger<RecipeForm> Logger
 @inject DraftService Drafts
 
-<PageTitle>@(recipe.Id > 0 ? "Edit Recipe" : "New Recipe")</PageTitle>
+<PageTitle>@AppInfo.Title(recipe.Id > 0 ? "Edit recipe" : "New recipe")</PageTitle>
 
 <h1 class="h3 mb-3">@(recipe.Id > 0 ? "Edit recipe" : "New recipe")</h1>
 

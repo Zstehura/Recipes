@@ -6,7 +6,7 @@
 @inject DraftService Drafts
 @inject ILogger<RecipeDetail> Logger
 
-<PageTitle>@(recipe?.Name ?? "Recipe")</PageTitle>
+<PageTitle>@AppInfo.Title(recipe?.Name ?? "Recipe")</PageTitle>
 
 @if (recipe == null)
 {

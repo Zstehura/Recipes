@@ -1,6 +1,6 @@
 {
-  "name": "Recipes",
-  "short_name": "Recipes",
+  "name": "Home Recipe Repo",
+  "short_name": "Recipe Repo",
   "description": "Your recipes, grocery lists and cooking view, on this home server.",
   "start_url": "./",
   "scope": "./",
