@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Recipes App</title>
     <base href="~/" />
+    @* Lets phones add the app to the home screen with its own icon and no browser bar.
+       There's no service worker: the app needs the server anyway, so nothing works offline. *@
+    <link rel="manifest" href="manifest.webmanifest" />
+    <meta name="theme-color" content="#3a0647" />
+    <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+    <link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="Recipes" />
     <link href="lib/bootstrap/bootstrap.min.css" rel="stylesheet" />
     <link href="lib/bootstrap-icons/bootstrap-icons.css" rel="stylesheet" />
     <link href="css/app.css" rel="stylesheet" />

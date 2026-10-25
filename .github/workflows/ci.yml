@@ -134,7 +134,8 @@ jobs:
             sleep 1
           done
           for path in / /_framework/blazor.server.js /css/app.css /lib/bootstrap/bootstrap.min.css \
-                      /lib/bootstrap-icons/bootstrap-icons.css /lib/bootstrap-icons/fonts/bootstrap-icons.woff2; do
+                      /lib/bootstrap-icons/bootstrap-icons.css /lib/bootstrap-icons/fonts/bootstrap-icons.woff2 \
+                      /manifest.webmanifest /icons/icon-192.png /icons/icon-512.png /icons/icon-maskable-512.png; do
             code=$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:8080$path")
             echo "$code $path"
             if [ "$code" != "200" ]; then docker logs recipes; exit 1; fi

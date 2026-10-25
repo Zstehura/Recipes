@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- App icon: a steaming bowl on the brand purple. Source for the PNGs in this folder. -->
+  <rect width="512" height="512" rx="112" fill="#3a0647"/>
+  <g fill="none" stroke="#fff" stroke-width="22" stroke-linecap="round">
+    <path d="M196 214c-22-26 22-46 0-76"/>
+    <path d="M256 214c-22-26 22-46 0-76"/>
+    <path d="M316 214c-22-26 22-46 0-76"/>
+  </g>
+  <path d="M120 256h272a136 136 0 0 1-272 0z" fill="#fff"/>
+  <rect x="196" y="398" width="120" height="22" rx="11" fill="#fff"/>
+</svg>
