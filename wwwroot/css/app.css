@@ -537,7 +537,9 @@ h1:focus {
     border-radius: 0.5rem;
 }
 
-/* Recipe detail: the cooking view (Pages/RecipeDetail.razor), readable at arm's length */
+/* Recipe detail: the cooking view (Pages/RecipeDetail.razor), readable at arm's length.
+   The toolbar matches its width so the "⋯" menu stays next to the recipe on a wide screen. */
+.cooking-toolbar,
 .cooking-view {
     max-width: 720px;
     font-size: 1.125rem;
