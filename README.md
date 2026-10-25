@@ -30,7 +30,7 @@ The app was renamed from "Recipes" to Home Recipe Repo. The repository, solution
 - **Ingredient library:** one shared list of ingredients, with default units, renaming, and merging of duplicates. Amounts keep the unit they were entered in ("2 tbsp", "1.5 cups")
 - **Search and filtering:** search by name, ingredient, or tag, and filter by cooking time, servings, and tags
 - **Search by ingredient:** pick ingredients and find the recipes that use all of them
-- **Grocery list:** pick recipes, set how many batches of each, and get one combined list. Quantities are added up across recipes and shown in readable units (for example 1.2 kg rather than 1200 g). Copy the list, or share it straight to another app where the browser supports it
+- **Grocery list:** pick recipes, set how many batches of each, and get one combined list. Quantities are added up across recipes: amounts entered in the same unit stay in it ("4 tbsp"), and mixed units are converted and shown readably (1.2 kg rather than 1200 g). Tick items off as they go in the basket (kept on the device), and copy the list or share it straight to another app where the browser supports it
 - **Import and export:** move recipes in and out as a plain-text format (see [Import format](#import-format))
 - **Unsaved work survives:** a half-written recipe, the grocery list, and search filters come back after switching apps on a phone, a lost connection, a page reload, or a server restart
 - **Home-screen icon:** a web app manifest and icons, so a phone can add the app to its home screen and open it without the browser bar

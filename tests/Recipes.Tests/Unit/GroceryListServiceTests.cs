@@ -23,9 +23,9 @@ public class GroceryListServiceTests
         return recipe;
     }
 
-    /// <summary>Returns only the ingredient lines ("- ...") from a generated list.</summary>
-    private static string[] ItemLines(string groceryList) =>
-        groceryList.Split(Environment.NewLine).Where(l => l.StartsWith("- ")).ToArray();
+    /// <summary>The items as the plain-text lines Copy and Share produce ("- 500 g Flour").</summary>
+    private static string[] ItemLines(CombinedGroceryList groceryList) =>
+        groceryList.Items.Select(i => $"- {i.ToText()}").ToArray();
 
     // ---------------------------------------------------------------- BuildGroceryList (pure)
 
@@ -65,7 +65,7 @@ public class GroceryListServiceTests
 
         var list = GroceryListService.BuildGroceryList(recipes, new() { [1] = 3 });
 
-        ItemLines(list).ShouldBe(new[] { "- 6 piece(s) Eggs" });
+        ItemLines(list).ShouldBe(new[] { "- 6 Eggs" });
     }
 
     [Fact]
@@ -121,7 +121,7 @@ public class GroceryListServiceTests
 
         var list = GroceryListService.BuildGroceryList(recipes, new() { [1] = 1, [2] = 1, [3] = 1, [4] = 1 });
 
-        ItemLines(list).ShouldBe(new[] { "- 150 g Butter", "- 3 piece(s) Butter" }, ignoreOrder: true);
+        ItemLines(list).ShouldBe(new[] { "- 150 g Butter", "- 3 Butter" }, ignoreOrder: true);
     }
 
     [Fact]
@@ -137,7 +137,7 @@ public class GroceryListServiceTests
         var list = GroceryListService.BuildGroceryList(recipes, new() { [1] = 1, [2] = 1, [3] = 1 });
 
         ItemLines(list).ShouldBe(
-            new[] { "- 2 piece(s) Tomato (sliced)", "- 3 piece(s) Tomato (diced)", "- 1 piece(s) Tomato" },
+            new[] { "- 2 Tomato (sliced)", "- 3 Tomato (diced)", "- 1 Tomato" },
             ignoreOrder: true);
     }
 
@@ -165,7 +165,7 @@ public class GroceryListServiceTests
 
         var list = GroceryListService.BuildGroceryList(recipes, new() { [1] = 1 });
 
-        ItemLines(list).ShouldBe(new[] { "- 1 piece(s) Apples", "- 1 ml Milk", "- 1 g Sugar" });
+        ItemLines(list).ShouldBe(new[] { "- 1 Apples", "- 1 ml Milk", "- 1 g Sugar" });
     }
 
     [Fact]
@@ -175,7 +175,7 @@ public class GroceryListServiceTests
 
         var list = GroceryListService.BuildGroceryList(recipes, new() { [1] = 1 });
 
-        ItemLines(list).ShouldBe(new[] { "- 2 piece(s) Lemon" });
+        ItemLines(list).ShouldBe(new[] { "- 2 Lemon" });
     }
 
     [Fact]
@@ -199,47 +199,102 @@ public class GroceryListServiceTests
     }
 
     [Theory]
-    [InlineData(1, "Grocery List for 1 Recipe", "Total: 1 ingredient from 1 recipe")]
-    [InlineData(2, "Grocery List for 2 Recipes", "Total: 1 ingredient from 2 recipes")]
-    public void BuildGroceryList_HeaderAndFooter_ArePluralizedByCount(int recipeCount, string expectedHeader, string expectedFooter)
+    [InlineData("Cups", 1, 2, "- 3 cups Rice")]
+    [InlineData("Tablespoons", 2, 2, "- 4 tbsp Oil")]
+    [InlineData("Kilograms", 1, 0.5, "- 1.5 kg Flour")]
+    [InlineData("Pounds", 1, 1, "- 2 lb Beef")]
+    public void BuildGroceryList_AllLinesInTheSameUnit_KeepsThatUnit(string unit, double first, double second, string expected)
     {
-        var recipes = Enumerable.Range(1, recipeCount)
-            .Select(id => CreateRecipe(id, ("Flour", 100m, "g", null)))
-            .ToList();
-        var multipliers = recipes.ToDictionary(r => r.Id, _ => 1);
+        var name = expected.Split(' ').Last();
+        var recipes = new List<Recipe>
+        {
+            CreateRecipe(1, (name, (decimal)first, unit, null)),
+            CreateRecipe(2, (name, (decimal)second, unit, null)),
+        };
 
-        var lines = GroceryListService.BuildGroceryList(recipes, multipliers).Split(Environment.NewLine);
+        var list = GroceryListService.BuildGroceryList(recipes, new() { [1] = 1, [2] = 1 });
 
-        lines.First().ShouldBe(expectedHeader);
-        lines.Last().ShouldBe(expectedFooter);
+        ItemLines(list).ShouldBe(new[] { expected });
+    }
+
+    [Fact]
+    public void BuildGroceryList_MixedUnits_AreAddedInBaseUnits()
+    {
+        var recipes = new List<Recipe>
+        {
+            CreateRecipe(1, ("Rice", 1m, "Cups", null)),
+            CreateRecipe(2, ("Rice", 100m, "ml", null)),
+        };
+
+        var list = GroceryListService.BuildGroceryList(recipes, new() { [1] = 1, [2] = 1 });
+
+        ItemLines(list).ShouldBe(new[] { "- 336.59 ml Rice" });
+    }
+
+    [Fact]
+    public void BuildGroceryList_ReturnsItems_WithQuantityAndUnit()
+    {
+        var recipes = new List<Recipe> { CreateRecipe(1, ("Rice", 1.5m, "Cups", null), ("Salt", null, null, "to taste")) };
+
+        var list = GroceryListService.BuildGroceryList(recipes, new() { [1] = 1 });
+
+        list.RecipeCount.ShouldBe(1);
+        list.Items.ShouldBe(new[]
+        {
+            new GroceryItem("Rice", 1.5m, MeasurementUnit.Cups),
+            new GroceryItem("Salt (to taste)", null, null),
+        });
+        list.Items[0].Amount.ShouldBe("1.5 cups");
+        list.Items[1].Amount.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void Items_HaveDistinctKeys_EvenWithTheSameName()
+    {
+        var recipes = new List<Recipe> { CreateRecipe(1, ("Butter", 100m, "g", null), ("Butter", 2m, "pieces", null)) };
+
+        var keys = GroceryListService.BuildGroceryList(recipes, new() { [1] = 1 }).Items.Select(i => i.Key).ToList();
+
+        keys.Distinct().Count().ShouldBe(2);
+    }
+
+    [Fact]
+    public void ToText_HasATitle_ThenOneLinePerItem()
+    {
+        var recipes = new List<Recipe> { CreateRecipe(1, ("Flour", 100m, "g", null), ("Eggs", 2m, "pieces", null)) };
+
+        var text = GroceryListService.BuildGroceryList(recipes, new() { [1] = 1 }).ToText();
+
+        text.Split(Environment.NewLine).ShouldBe(new[] { "Grocery list", "", "- 2 Eggs", "- 100 g Flour" });
     }
 
     // ---------------------------------------------------------------- GenerateGroceryListAsync (with a fake reader)
 
     [Fact]
-    public async Task GenerateGroceryListAsync_NoSelection_ReturnsNoRecipesMessage()
+    public async Task GenerateGroceryListAsync_NoSelection_ReturnsAnEmptyList()
     {
         var reader = Substitute.For<IRecipeReader>();
         var service = new GroceryListService(reader);
 
         var result = await service.GenerateGroceryListAsync(new Dictionary<int, int>());
 
-        result.ShouldBe("No recipes selected.");
+        result.Items.ShouldBeEmpty();
+        result.RecipeCount.ShouldBe(0);
         await reader.DidNotReceiveWithAnyArgs().GetRecipeByIdAsync(default);
     }
 
     [Fact]
-    public async Task GenerateGroceryListAsync_NullSelection_ReturnsNoRecipesMessage()
+    public async Task GenerateGroceryListAsync_NullSelection_ReturnsAnEmptyList()
     {
         var service = new GroceryListService(Substitute.For<IRecipeReader>());
 
-        var result = await service.GenerateGroceryListAsync(null!);
+        var result = await service.GenerateGroceryListAsync(null);
 
-        result.ShouldBe("No recipes selected.");
+        result.Items.ShouldBeEmpty();
     }
 
     [Fact]
-    public async Task GenerateGroceryListAsync_AllRecipesMissing_ReturnsNoValidRecipesMessage()
+    public async Task GenerateGroceryListAsync_AllRecipesMissing_ReturnsAnEmptyList()
     {
         var reader = Substitute.For<IRecipeReader>();
         reader.GetRecipeByIdAsync(Arg.Any<int>()).Returns((Recipe?)null);
@@ -247,7 +302,8 @@ public class GroceryListServiceTests
 
         var result = await service.GenerateGroceryListAsync(new() { [42] = 1 });
 
-        result.ShouldBe("No valid recipes found.");
+        result.Items.ShouldBeEmpty();
+        result.RecipeCount.ShouldBe(0);
     }
 
     [Fact]

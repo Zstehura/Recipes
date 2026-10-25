@@ -24,7 +24,7 @@ public sealed class GroceryListTests : ComponentTestBase
     {
         cut.Find($"#recipe-{recipeId}").Change(true);
         Click(cut, "Make list");
-        cut.WaitForAssertion(() => cut.FindAll(".grocery-text").Count.ShouldBe(1));
+        cut.WaitForAssertion(() => cut.FindAll(".grocery-items").Count.ShouldBe(1));
         return cut;
     }
 
@@ -54,7 +54,7 @@ public sealed class GroceryListTests : ComponentTestBase
         cut.Find(".stepper-value").TextContent.ShouldBe("2×");
         Click(cut, "Make list");
 
-        cut.WaitForAssertion(() => cut.Find(".grocery-text").TextContent.ShouldContain("400 g Flour"));
+        cut.WaitForAssertion(() => cut.Find(".grocery-items").TextContent.ShouldContain("400 g Flour"));
         cut.Find(".grocery-result").TextContent.ShouldContain("From 2 × Pancakes");
     }
 
@@ -69,7 +69,7 @@ public sealed class GroceryListTests : ComponentTestBase
 
         cut.Find($"#recipe-{id}").HasAttribute("checked").ShouldBeTrue();
         Click(cut, "View list");
-        cut.FindAll(".grocery-text").Count.ShouldBe(1);
+        cut.FindAll(".grocery-items").Count.ShouldBe(1);
     }
 
     [Fact]
@@ -83,7 +83,7 @@ public sealed class GroceryListTests : ComponentTestBase
 
         JSInterop.VerifyInvoke("appDialog.show");
         HasDraft(GroceryListDraft.Key).ShouldBeTrue();
-        cut.FindAll(".grocery-text").Count.ShouldBe(1);
+        cut.FindAll(".grocery-items").Count.ShouldBe(1);
     }
 
     [Fact]
@@ -99,6 +99,80 @@ public sealed class GroceryListTests : ComponentTestBase
         cut.Find($"#recipe-{id}").HasAttribute("checked").ShouldBeFalse();
     }
 
+    private static string[] Items(IRenderedComponent<GroceryList> cut) =>
+        cut.FindAll(".grocery-items label").Select(l => l.TextContent.Trim()).ToArray();
+
+    [Fact]
+    public void TheList_IsAChecklist_WithAmountsFirst()
+    {
+        var id = Db.SeedRecipe("Curry", new (string, decimal?, string?, string?)[]
+        {
+            ("Rice", 1.5m, "Cups", null), ("Eggs", 2m, "pieces", null), ("Salt", null, null, "to taste"),
+        });
+        var cut = MakeListFor(Render<GroceryList>(), id);
+
+        Items(cut).ShouldBe(new[] { "2 Eggs", "1.5 cups Rice", "Salt (to taste)" });
+        cut.FindAll(".grocery-items input[type=checkbox]").Count.ShouldBe(3);
+        cut.Markup.ShouldNotContain("----");   // no plain-text rules or totals any more
+    }
+
+    [Fact]
+    public void TickingAnItem_CrossesItOff_AndSurvivesAReload()
+    {
+        var id = SeedPancakes();
+        var cut = MakeListFor(Render<GroceryList>(), id);
+
+        cut.Find(".grocery-items input").Change(true);
+
+        cut.Find(".grocery-items label").ClassList.ShouldContain("done");
+        cut.WaitForAssertion(() => Store.Values[(DraftLifetime.Device, GroceryListDraft.Key)].ShouldContain("GotItems"));
+        var reloaded = Render<GroceryList>();
+        reloaded.WaitForAssertion(() => reloaded.Find(".grocery-items label").ClassList.ShouldContain("done"));
+    }
+
+    [Fact]
+    public void UncheckAll_AppearsOnceSomethingIsTicked()
+    {
+        var id = SeedPancakes();
+        var cut = MakeListFor(Render<GroceryList>(), id);
+        cut.FindAll("button").ShouldNotContain(b => b.TextContent.Contains("Uncheck all"));
+        cut.Find(".grocery-items input").Change(true);
+
+        Click(cut, "Uncheck all");
+
+        cut.Find(".grocery-items label").ClassList.ShouldNotContain("done");
+    }
+
+    [Fact]
+    public void MakingTheListAgain_StartsWithNothingTicked()
+    {
+        var id = SeedPancakes();
+        var cut = MakeListFor(Render<GroceryList>(), id);
+        cut.Find(".grocery-items input").Change(true);
+
+        Click(cut, "Change recipes");
+        Click(cut, "Make list");
+
+        cut.WaitForAssertion(() => cut.Find(".grocery-items label").ClassList.ShouldNotContain("done"));
+    }
+
+    [Fact]
+    public void DeletedRecipes_GiveAnEmptyListMessage()
+    {
+        var id = SeedPancakes();
+        var cut = Render<GroceryList>();
+        cut.Find($"#recipe-{id}").Change(true);
+        using (var context = Db.CreateContext())
+        {
+            context.Recipes.Remove(context.Recipes.Single());
+            context.SaveChanges();
+        }
+
+        Click(cut, "Make list");
+
+        cut.WaitForAssertion(() => cut.Find(".grocery-result .empty-state").TextContent.ShouldContain("nothing to buy"));
+    }
+
     [Fact]
     public void Copy_UsesTheCopyHelper_AndSaysSo()
     {
@@ -107,7 +181,7 @@ public sealed class GroceryListTests : ComponentTestBase
 
         Click(cut, "Copy");
 
-        JSInterop.VerifyInvoke("appShare.copy").Arguments[0]!.ToString()!.ShouldContain("200 g Flour");
+        JSInterop.VerifyInvoke("appShare.copy").Arguments[0]!.ToString()!.ShouldBe($"Grocery list{Environment.NewLine}{Environment.NewLine}- 200 g Flour");
         cut.WaitForAssertion(() => cut.Find(".grocery-result [role=status]").TextContent.ShouldBe("Copied."));
     }
 

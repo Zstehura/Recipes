@@ -11,11 +11,17 @@
 
 <h1 class="h3 mb-3">Grocery list</h1>
 
-@if (showingList && !string.IsNullOrEmpty(generatedGroceryList))
+@if (showingList && groceryList != null)
 {
     @* The list itself: what you look at in the shop *@
     <section class="grocery-result" aria-labelledby="list-heading">
-        <h2 id="list-heading" class="h5" tabindex="-1" @ref="listHeading">Your list</h2>
+        <div class="d-flex align-items-baseline justify-content-between gap-2">
+            <h2 id="list-heading" class="h5" tabindex="-1" @ref="listHeading">Your list</h2>
+            @if (gotItems.Count > 0)
+            {
+                <button type="button" class="btn btn-link p-0" @onclick="() => gotItems.Clear()">Uncheck all</button>
+            }
+        </div>
         <p class="text-muted small">From @SelectionSummary</p>
 
         @* Above the list, so a long list doesn't push them off screen *@
@@ -32,7 +38,44 @@
             <span class="small" role="status">@copyMessage</span>
         </div>
 
-        <div class="grocery-text">@generatedGroceryList</div>
+        @if (groceryList.Items.Count == 0)
+        {
+            <div class="empty-state">
+                <p class="mb-0">There's nothing to buy: these recipes have no ingredients, or they've been deleted.</p>
+            </div>
+        }
+        else
+        {
+            <p class="text-muted small mb-2">Tap an item once it's in your basket.</p>
+            @* Same checklist as the cooking view *@
+            <ul class="ingredient-checklist grocery-items">
+                @foreach (var item in groceryList.Items)
+                {
+                    var got = gotItems.Contains(item.Key);
+                    <li @key="item.Key">
+                        <label class="ingredient-check @(got ? "done" : "")">
+                            <input type="checkbox" class="form-check-input" checked="@got" @onchange="() => ToggleGot(item.Key)" />
+                            <span>
+                                @if (item.Quantity is null)
+                                {
+                                    @item.Name
+                                }
+                                else if (item.Quantity < 0.01m)
+                                {
+                                    @item.Name <span class="text-muted">(@item.Amount)</span>
+                                }
+                                else
+                                {
+                                    <strong>@item.Amount</strong>
+                                    @(" ")
+                                    @item.Name
+                                }
+                            </span>
+                        </label>
+                    </li>
+                }
+            </ul>
+        }
 
         <div class="d-flex flex-wrap gap-2 mt-3">
             <button type="button" class="btn btn-outline-secondary" @onclick="() => showingList = false">
@@ -124,7 +167,7 @@ else
         {
             <button type="button" class="btn btn-link" @onclick="RequestStartOver">Clear</button>
         }
-        @if (!string.IsNullOrEmpty(generatedGroceryList))
+        @if (groceryList != null)
         {
             <button type="button" class="btn btn-outline-primary" @onclick="ShowList">View list</button>
         }
@@ -148,7 +191,8 @@ else
     private List<Recipe>? recipes;
     private Dictionary<int, int> selectedRecipeMultipliers = new();
     private Dictionary<int, string> selectedRecipeNames = new();
-    private string? generatedGroceryList;
+    private CombinedGroceryList? groceryList;
+    private HashSet<string> gotItems = new();   // items ticked off in the shop, by GroceryItem.Key
     private bool showingList;
     private bool focusList;
     private bool isGenerating = false;
@@ -200,14 +244,15 @@ else
     private GroceryListDraft CaptureDraft() => new(
         new SortedDictionary<int, int>(selectedRecipeMultipliers),
         new SortedDictionary<int, string>(selectedRecipeNames),
-        generatedGroceryList,
+        groceryList,
         searchTerm,
         showFilters,
         filters.MinCookTime,
         filters.MaxCookTime,
         filters.MinServings,
         filters.MaxServings,
-        filters.Tags.Order().ToList());
+        filters.Tags.Order().ToList(),
+        gotItems.Order().ToList());
 
     private async Task RestoreDraftAsync()
     {
@@ -220,8 +265,9 @@ else
             var saved = draft.Value;
             selectedRecipeMultipliers = new Dictionary<int, int>(saved.Multipliers);
             selectedRecipeNames = new Dictionary<int, string>(saved.RecipeNames);
-            generatedGroceryList = saved.GeneratedList;
-            showingList = !string.IsNullOrEmpty(saved.GeneratedList);   // back in the shop: the list comes first
+            groceryList = saved.GeneratedList;
+            gotItems = (saved.GotItems ?? new()).ToHashSet();
+            showingList = saved.GeneratedList != null;   // back in the shop: the list comes first
             searchTerm = saved.SearchTerm;
             showFilters = saved.ShowFilters;
             filters = new RecipeFilterState
@@ -293,7 +339,8 @@ else
 
         try
         {
-            generatedGroceryList = await GroceryListService.GenerateGroceryListAsync(selectedRecipeMultipliers);
+            groceryList = await GroceryListService.GenerateGroceryListAsync(selectedRecipeMultipliers);
+            gotItems.Clear();   // a new list starts with nothing ticked
             showingList = true;
             focusList = true;
         }
@@ -301,6 +348,14 @@ else
         {
             isGenerating = false;
             StateHasChanged();
+        }
+    }
+
+    private void ToggleGot(string key)
+    {
+        if (!gotItems.Remove(key))
+        {
+            gotItems.Add(key);
         }
     }
 
@@ -313,7 +368,7 @@ else
     // Losing a made list is annoying in the shop, so that asks first; a bare selection just clears
     private async Task RequestStartOver()
     {
-        if (string.IsNullOrEmpty(generatedGroceryList))
+        if (groceryList == null)
         {
             await ClearSelection();
         }
@@ -345,7 +400,8 @@ else
     {
         selectedRecipeMultipliers.Clear();
         selectedRecipeNames.Clear();
-        generatedGroceryList = null;
+        groceryList = null;
+        gotItems.Clear();
         showingList = false;
         copyMessage = null;
         await ClearFilters();
@@ -355,7 +411,7 @@ else
     {
         try
         {
-            await JSRuntime.InvokeVoidAsync("appShare.copy", generatedGroceryList);
+            await JSRuntime.InvokeVoidAsync("appShare.copy", groceryList?.ToText());
             copyMessage = "Copied.";
             StateHasChanged();
 
@@ -377,7 +433,7 @@ else
     {
         try
         {
-            await JSRuntime.InvokeAsync<bool>("appShare.share", "Grocery list", generatedGroceryList);
+            await JSRuntime.InvokeAsync<bool>("appShare.share", "Grocery list", groceryList?.ToText());
         }
         catch (JSException ex)
         {

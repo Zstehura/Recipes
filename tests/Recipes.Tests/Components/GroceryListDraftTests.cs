@@ -1,5 +1,7 @@
 using Bunit;
+using RecipesApp.Models;
 using RecipesApp.Pages;
+using RecipesApp.Services;
 using RecipesApp.Services.Drafts;
 using Shouldly;
 
@@ -45,7 +47,11 @@ public sealed class GroceryListDraftTests : ComponentTestBase
         await Drafts.SaveAsync(GroceryListDraft.Key, new GroceryListDraft(
             Multipliers: new SortedDictionary<int, int> { [id] = 3 },
             RecipeNames: new SortedDictionary<int, string> { [id] = "Pancakes" },
-            GeneratedList: "- 3 piece(s) Eggs\n- 3 piece(s) Flour",
+            GeneratedList: new CombinedGroceryList(1, new List<GroceryItem>
+            {
+                new("Eggs", 3m, MeasurementUnit.Pieces),
+                new("Flour", 3m, MeasurementUnit.Pieces),
+            }),
             SearchTerm: "",
             ShowFilters: false,
             MinCookTime: null, MaxCookTime: null, MinServings: null, MaxServings: null,
@@ -53,13 +59,31 @@ public sealed class GroceryListDraftTests : ComponentTestBase
 
         var cut = Render<GroceryList>();
 
-        cut.WaitForAssertion(() => cut.Find(".grocery-text").TextContent.ShouldContain("3 piece(s) Flour"));
+        cut.WaitForAssertion(() => cut.Find(".grocery-items").TextContent.ShouldContain("3 Flour"));
         cut.Markup.ShouldContain("3 × Pancakes");
 
         cut.FindAll("button").Single(b => b.TextContent.Contains("Change recipes")).Click();
 
         cut.Find($"#recipe-{id}").HasAttribute("checked").ShouldBeTrue();
         cut.Find(".stepper-value").TextContent.ShouldBe("3×");
+    }
+
+    [Fact]
+    public void ADraftFromBeforeTheChecklist_IsDiscarded_AndThePageStartsFresh()
+    {
+        // Older versions saved the list as text; that no longer reads as this draft
+        var id = Db.SeedRecipe("Pancakes", "Flour");
+        Store.Values[(DraftLifetime.Device, GroceryListDraft.Key)] = $$"""
+            {"Version":1,"SavedAt":"{{Clock.GetUtcNow():O}}","Payload":{"Multipliers":{"{{id}}":2},"RecipeNames":{"{{id}}":"Pancakes"},
+             "GeneratedList":"Grocery List for 1 Recipe\n- 2 piece(s) Flour","SearchTerm":"","ShowFilters":false,
+             "MinCookTime":null,"MaxCookTime":null,"MinServings":null,"MaxServings":null,"Tags":[]} }
+            """;
+
+        var cut = Render<GroceryList>();
+
+        cut.WaitForAssertion(() => HasDraft(GroceryListDraft.Key).ShouldBeFalse());
+        cut.Find($"#recipe-{id}").HasAttribute("checked").ShouldBeFalse();
+        cut.FindAll(".grocery-result").ShouldBeEmpty();
     }
 
     [Fact]

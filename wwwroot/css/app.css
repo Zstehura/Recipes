@@ -810,13 +810,9 @@ h1:focus {
     }
 }
 
-.grocery-text {
-    padding: 1rem;
+/* The grocery list reuses the cooking view's checklist, a little larger for reading in the shop */
+.grocery-items {
     font-size: 1.1rem;
-    line-height: 1.7;
-    white-space: pre-wrap;
-    background-color: #f8f9fa;
-    border-radius: 0.5rem;
 }
 
 /* Recipe form (Pages/RecipeForm.razor) */
