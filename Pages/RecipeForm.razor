@@ -5,6 +5,7 @@
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Components.Forms
 @inject RecipeService RecipeService
+@inject IRecipeReader RecipeReader
 @inject NavigationManager Navigation
 @inject ILogger<RecipeForm> Logger
 @inject DraftService Drafts
@@ -23,6 +24,12 @@
     </div>
 }
 
+@if (!loaded)
+{
+    <p><em>Loading recipe...</em></p>
+}
+else
+{
 <EditForm Model="@recipe" OnValidSubmit="@HandleValidSubmit" class="recipe-form">
     <DataAnnotationsValidator />
 
@@ -165,6 +172,7 @@
         <button type="submit" class="btn btn-primary">Save recipe</button>
     </div>
 </EditForm>
+}
 
 @code {
     [Parameter]
@@ -186,6 +194,10 @@
     private InputNumber<decimal?>? lastQuantityInput;
     private bool focusNewIngredient;
 
+    // Until an existing recipe has loaded there's nothing to edit, or to restore a draft onto
+    private bool loaded;
+    private bool draftRestoreDone;
+
     private bool HasExtras => !string.IsNullOrWhiteSpace(recipe.Tags) || !string.IsNullOrWhiteSpace(recipe.Notes)
         || recipe.ImageContentType != null;
 
@@ -193,7 +205,7 @@
     {
         if (Id > 0)
         {
-            var existingRecipe = await RecipeService.GetRecipeByIdAsync(Id);
+            var existingRecipe = await RecipeReader.GetRecipeByIdAsync(Id);
             if (existingRecipe != null)
             {
                 recipe = existingRecipe;
@@ -208,8 +220,8 @@
                     recipe.ImageContentType = contentType;
                 }
                 
-                // Convert stored base-unit lines into form entries
                 ingredientEntries = IngredientEntryMapper.FromRecipeIngredients(existingRecipe.RecipeIngredients);
+                loaded = true;
             }
             else
             {
@@ -220,15 +232,20 @@
         {
             // Add one empty ingredient entry for new recipes
             AddIngredient();
+            loaded = true;
         }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        // Browser storage needs JavaScript interop, which is only available once the page is
+        // interactive, so drafts are restored here rather than in OnInitializedAsync. Blazor can
+        // render before OnInitializedAsync finishes, so wait for the recipe: a draft restored
+        // onto a recipe that hasn't loaded would be overwritten by it, and its autosave would
+        // start from the wrong baseline. The render after loading finishes comes back here.
+        if (!draftRestoreDone && loaded)
         {
-            // Browser storage needs JavaScript interop, which is only available once the page
-            // is interactive, so drafts are restored here rather than in OnInitializedAsync
+            draftRestoreDone = true;
             await RestoreDraftAsync();
             return;
         }
@@ -250,11 +267,6 @@
 
     private async Task RestoreDraftAsync()
     {
-        if (Id > 0 && recipe.Id == 0)
-        {
-            return; // the recipe wasn't found and we're navigating away
-        }
-
         autosave = new DraftAutosave<RecipeDraft>(Drafts, RecipeDraft.KeyFor(Id), DraftLifetime.Device);
         var baseline = CaptureDraft();
 

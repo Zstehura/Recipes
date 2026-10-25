@@ -1,5 +1,8 @@
 using Bunit;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using Recipes.Tests.TestData;
 using RecipesApp.Models;
 using RecipesApp.Pages;
 using RecipesApp.Services;
@@ -87,6 +90,31 @@ public sealed class RecipeFormDraftTests : ComponentTestBase
         var cut = Render<RecipeForm>(p => p.Add(f => f.Id, id));
 
         cut.WaitForAssertion(() => cut.Find("#name").GetAttribute("value").ShouldBe("Sourdough"));
+    }
+
+    [Fact]
+    public async Task EditRecipe_RecipeStillLoadingAtFirstRender_RestoresTheDraftOnceItLoads()
+    {
+        var id = Db.SeedRecipe("Bread", "Flour");
+        await SeedDraftAsync(id, CompleteDraft(baseModifiedDate: StoredModifiedDate(id)) with { Name = "Sourdough" });
+        var reader = new GatedRecipeReader(new RecipeService(Db.CreateContext(), NullLogger<RecipeService>.Instance));
+        Services.AddSingleton<IRecipeReader>(reader);
+
+        var cut = Render<RecipeForm>(p => p.Add(f => f.Id, id));
+
+        // First render has happened, but the recipe hasn't arrived: no form to restore onto yet
+        cut.Markup.ShouldContain("Loading recipe...");
+        cut.FindAll("#name").ShouldBeEmpty();
+        HasDraft(id).ShouldBeTrue();
+
+        reader.Release();
+
+        cut.WaitForAssertion(() => cut.Find("#name").GetAttribute("value").ShouldBe("Sourdough"));
+        cut.Markup.ShouldContain("Restored your unsaved changes");
+
+        // Autosave started from the loaded recipe, so further edits are saved
+        cut.Find("#name").Change("Rye");
+        cut.WaitForAssertion(() => Store.Values[(DraftLifetime.Device, RecipeDraft.KeyFor(id))].ShouldContain("Rye"));
     }
 
     [Fact]
