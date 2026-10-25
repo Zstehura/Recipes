@@ -89,6 +89,51 @@ public sealed class RecipeFormLayoutTests : ComponentTestBase
     }
 
     [Fact]
+    public void NewRecipe_StartsWithEmptyTimeAndServings_NotZero()
+    {
+        var cut = RenderNew();
+
+        cut.Find("#cookingTime").GetAttribute("value").ShouldBeNullOrEmpty();
+        cut.Find("#servings").GetAttribute("value").ShouldBeNullOrEmpty();
+    }
+
+    [Fact]
+    public void LeavingTimeAndServingsEmpty_SaysTheyMustBeAtLeastOne()
+    {
+        var cut = RenderNew();
+
+        cut.Find("form").Submit();
+
+        var alert = cut.Find("form [role=alert]").TextContent;
+        alert.ShouldContain("Cooking time must be at least 1 minute");
+        alert.ShouldContain("Servings must be at least 1");
+    }
+
+    [Fact]
+    public void TypingANumber_ThenClearingIt_GoesBackToEmpty()
+    {
+        var cut = RenderNew();
+
+        cut.Find("#servings").Change("4");
+        cut.Find("#servings").GetAttribute("value").ShouldBe("4");
+        cut.Find("#servings").Change("");
+
+        cut.Find("#servings").GetAttribute("value").ShouldBeNullOrEmpty();
+        cut.Markup.ShouldNotContain("must be a number");
+    }
+
+    [Fact]
+    public void EditingARecipe_ShowsItsTimeAndServings()
+    {
+        var id = Db.SeedRecipe("Lasagna", cookingTime: 90, servings: 6);
+
+        var cut = RenderEdit(id);
+
+        cut.WaitForAssertion(() => cut.Find("#cookingTime").GetAttribute("value").ShouldBe("90"));
+        cut.Find("#servings").GetAttribute("value").ShouldBe("6");
+    }
+
+    [Fact]
     public void MoreDetails_IsClosedForANewRecipe()
     {
         var cut = RenderNew();

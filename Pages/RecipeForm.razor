@@ -42,12 +42,12 @@ else
     <div class="row g-2 mb-3">
         <div class="col-6">
             <label class="form-label" for="cookingTime">Cooking time (min)</label>
-            <InputNumber id="cookingTime" class="form-control" inputmode="numeric" @bind-Value="recipe.CookingTime" />
+            <InputPositiveNumber id="cookingTime" class="form-control" inputmode="numeric" @bind-Value="recipe.CookingTime" />
             <ValidationMessage For="@(() => recipe.CookingTime)" />
         </div>
         <div class="col-6">
             <label class="form-label" for="servings">Servings</label>
-            <InputNumber id="servings" class="form-control" inputmode="numeric" @bind-Value="recipe.Servings" />
+            <InputPositiveNumber id="servings" class="form-control" inputmode="numeric" @bind-Value="recipe.Servings" />
             <ValidationMessage For="@(() => recipe.Servings)" />
         </div>
     </div>
