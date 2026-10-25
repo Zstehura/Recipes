@@ -71,6 +71,24 @@ public sealed class RecipeFormLayoutTests : ComponentTestBase
     }
 
     [Fact]
+    public void Editing_ShowsAmountsAsEntered_WithoutTrailingZeros()
+    {
+        var id = Db.SeedRecipe("Curry", new (string, decimal?, string?, string?)[]
+        {
+            ("Curry powder", 2m, "Tablespoons", null),
+            ("Chicken", 600.0m, "g", null),
+            ("Oil", 14.7868m, "ml", null),   // 1 tbsp, saved in ml by an older version
+        });
+
+        var cut = RenderEdit(id);
+
+        cut.WaitForAssertion(() => cut.Find("#ing-0-qty").GetAttribute("value").ShouldBe("2"));
+        cut.Find("#ing-0-unit").GetAttribute("value").ShouldBe("Tablespoons");
+        cut.Find("#ing-1-qty").GetAttribute("value").ShouldBe("600");
+        cut.Find("#ing-2-qty").GetAttribute("value").ShouldBe("14.79");
+    }
+
+    [Fact]
     public void MoreDetails_IsClosedForANewRecipe()
     {
         var cut = RenderNew();

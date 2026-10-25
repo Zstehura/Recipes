@@ -76,15 +76,10 @@ else
                         <label class="ingredient-check @(isDone ? "done" : "")">
                             <input type="checkbox" class="form-check-input" checked="@isDone" @onchange="() => ToggleDone(line.Id)" />
                             <span>
-                                @if (line.Quantity.HasValue && !string.IsNullOrWhiteSpace(line.Unit))
+                                @if (line.Quantity is decimal quantity)
                                 {
-                                    // Stored in base units; shown in a readable unit. Counts read better
-                                    // without one: "2 Eggs", not "2 piece(s) Eggs".
-                                    var (quantity, unit) = UnitConversionService.ConvertFromBaseUnit(line.Quantity.Value, line.Unit);
-                                    var amount = unit == MeasurementUnit.Pieces
-                                        ? quantity.ToString("0.##")
-                                        : $"{quantity:0.##} {UnitConversionService.GetUnitDisplayName(unit)}";
-                                    <strong>@amount</strong>
+                                    // Shown as entered: "2 tbsp", or "2 Eggs" for a count
+                                    <strong>@UnitConversionService.FormatAmount(quantity, line.Unit ?? MeasurementUnit.Pieces)</strong>
                                     @(" ")
                                 }
                                 @name@modifier

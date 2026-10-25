@@ -145,6 +145,19 @@ public class UnitConversionServiceTests
         UnitConversionService.GetUnitDisplayName(baseUnit).ShouldBe(expected);
     }
 
+    [Theory]
+    [InlineData(600, MeasurementUnit.Grams, "600 g")]
+    [InlineData(2, MeasurementUnit.Tablespoons, "2 tbsp")]
+    [InlineData(1, MeasurementUnit.Cups, "1 cup")]
+    [InlineData(1.5, MeasurementUnit.Cups, "1.5 cups")]
+    [InlineData(0.333333, MeasurementUnit.Cups, "0.33 cups")]
+    [InlineData(2, MeasurementUnit.Pieces, "2")]
+    [InlineData(14.7868, MeasurementUnit.Milliliters, "14.79 ml")]
+    public void FormatAmount_ShowsTheUnit_ExceptForCounts(double quantity, MeasurementUnit unit, string expected)
+    {
+        UnitConversionService.FormatAmount((decimal)quantity, unit).ShouldBe(expected);
+    }
+
     [Fact]
     public void EveryMeasurementUnit_HasConversionAndDisplayName()
     {

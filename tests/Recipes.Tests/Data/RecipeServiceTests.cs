@@ -53,12 +53,12 @@ public sealed class RecipeServiceTests : IDisposable
     }
 
     [Theory]
-    [InlineData(MeasurementUnit.Cups, 2, 473.176, "ml")]
-    [InlineData(MeasurementUnit.Kilograms, 1.5, 1500, "g")]
-    [InlineData(MeasurementUnit.Teaspoons, 0.5, 2.46446, "ml")]
-    [InlineData(MeasurementUnit.Pieces, 3, 3, "pieces")]
-    public async Task AddRecipeAsync_IngredientQuantity_IsStoredInBaseUnit(
-        MeasurementUnit unit, double quantity, double expectedQuantity, string expectedUnit)
+    [InlineData(MeasurementUnit.Cups, 2)]
+    [InlineData(MeasurementUnit.Kilograms, 1.5)]
+    [InlineData(MeasurementUnit.Teaspoons, 0.5)]
+    [InlineData(MeasurementUnit.FluidOunces, 8)]
+    [InlineData(MeasurementUnit.Pieces, 3)]
+    public async Task AddRecipeAsync_IngredientQuantity_IsStoredAsEntered(MeasurementUnit unit, double quantity)
     {
         var recipe = await CreateService().AddRecipeAsync(NewRecipe(), new List<IngredientEntry>
         {
@@ -66,8 +66,17 @@ public sealed class RecipeServiceTests : IDisposable
         });
 
         var link = (await LoadRecipe(recipe.Id)).RecipeIngredients.ShouldHaveSingleItem();
-        link.Quantity.ShouldBe((decimal)expectedQuantity);
-        link.Unit.ShouldBe(expectedUnit);
+        link.Quantity.ShouldBe((decimal)quantity);
+        link.Unit.ShouldBe(unit);
+    }
+
+    [Fact]
+    public async Task UnitsAreStoredByName_InTheTextColumn()
+    {
+        await CreateService().AddRecipeAsync(NewRecipe(), new List<IngredientEntry> { Entry("Milk", 2m, MeasurementUnit.Tablespoons) });
+
+        using var context = _db.CreateContext();
+        context.Database.SqlQueryRaw<string>("SELECT Unit AS Value FROM RecipeIngredients").Single().ShouldBe("Tablespoons");
     }
 
     [Fact]
@@ -200,7 +209,7 @@ public sealed class RecipeServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ImportFlow_ParseMapAndSave_StoresBaseUnitQuantities()
+    public async Task ImportFlow_ParseMapAndSave_StoresQuantitiesAsWritten()
     {
         // The same steps the Import page runs: parse text, map lines to entries, save.
         var text = Recipes.Tests.TestData.RecipeTextBuilder.Build(ingredients: new[]
@@ -214,10 +223,10 @@ public sealed class RecipeServiceTests : IDisposable
         var saved = await CreateService().AddRecipeAsync(parsed, entries);
 
         var lines = (await LoadRecipe(saved.Id)).RecipeIngredients.ToDictionary(ri => ri.Ingredient.Name);
-        lines["Milk"].Quantity.ShouldBe(473.176m);
-        lines["Milk"].Unit.ShouldBe("ml");
-        lines["Flour"].Quantity.ShouldBe(1500m);
-        lines["Flour"].Unit.ShouldBe("g");
+        lines["Milk"].Quantity.ShouldBe(2m);
+        lines["Milk"].Unit.ShouldBe(MeasurementUnit.Cups);
+        lines["Flour"].Quantity.ShouldBe(1.5m);
+        lines["Flour"].Unit.ShouldBe(MeasurementUnit.Kilograms);
         lines["Salt"].Quantity.ShouldBeNull();
     }
 

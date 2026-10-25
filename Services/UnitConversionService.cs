@@ -69,6 +69,21 @@ public class UnitConversionService
         };
     }
 
+    /// <summary>
+    /// An amount for reading: "600 g", "2 tbsp", "1 cup", "1.5 cups". Counts read better
+    /// without a unit: "2" (Eggs), not "2 piece(s)". Up to two decimal places.
+    /// </summary>
+    public static string FormatAmount(decimal quantity, MeasurementUnit unit)
+    {
+        var number = quantity.ToString("0.##");
+        return unit switch
+        {
+            MeasurementUnit.Pieces => number,
+            MeasurementUnit.Cups => $"{number} {(quantity == 1 ? "cup" : "cups")}",
+            _ => $"{number} {GetUnitDisplayName(unit)}"
+        };
+    }
+
     public static string GetUnitDisplayName(string baseUnit)
     {
         return baseUnit switch

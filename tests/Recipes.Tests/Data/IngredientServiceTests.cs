@@ -186,7 +186,7 @@ public sealed class IngredientServiceTests : IDisposable
 
         var bread = links.Single(ri => ri.RecipeId == breadId);
         bread.Quantity.ShouldBe(500m);
-        bread.Unit.ShouldBe("g");
+        bread.Unit.ShouldBe(MeasurementUnit.Grams);
         bread.Modifier.ShouldBe("sifted");
     }
 
@@ -224,6 +224,7 @@ public sealed class IngredientServiceTests : IDisposable
 
     [Theory]
     [InlineData(500, "g", null, 200, "ml", null)]          // different units
+    [InlineData(1, "Cups", null, 200, "ml", null)]         // both volumes, but entered in different units
     [InlineData(500, "g", "sifted", 200, "g", null)]       // different modifiers
     public async Task MergeIngredientsAsync_RecipeHasBothButLinesDiffer_KeepsBothLines(
         double targetQuantity, string targetUnit, string? targetModifier,

@@ -66,9 +66,11 @@ public class RecipeImportExportService
                 continue;
             }
 
-            // Invariant culture: always "473.176", never "473,176", so files are portable
-            var unit = ri.Unit ?? "pieces";
-            sb.AppendLine($"{quantity.ToString(CultureInfo.InvariantCulture)}{unit} {ri.Ingredient.Name}{modifier}");
+            // As entered ("2 tbsp"), with the number tidied the same way as in the edit form.
+            // Invariant culture: always "0.5", never "0,5", so files are portable.
+            var amount = IngredientEntryMapper.ForEditing(quantity, ri.Unit ?? MeasurementUnit.Pieces);
+            var unit = ExportUnit(ri.Unit ?? MeasurementUnit.Pieces, amount);
+            sb.AppendLine($"{amount.ToString(CultureInfo.InvariantCulture)} {unit} {ri.Ingredient.Name}{modifier}");
         }
         sb.AppendLine();
 
@@ -446,22 +448,13 @@ public class RecipeImportExportService
             var entry = ParseIngredientLine(trimmedLine);
             if (entry != null)
             {
-                // Store the quantity in its base unit (g / ml / pieces), as the database does,
-                // so "2 cups" becomes 473.176 ml rather than 2 ml.
-                decimal? quantity = null;
-                var unit = ConvertUnitToBaseUnit(entry.Unit);
-                if (entry.Quantity.HasValue)
-                {
-                    (quantity, unit) = UnitConversionService.ConvertToBaseUnit(entry.Quantity.Value, entry.Unit);
-                }
-
                 // Create a temporary RecipeIngredient with just the name.
                 // The actual ingredient lookup is handled by RecipeService.
                 var recipeIngredient = new RecipeIngredient
                 {
                     Ingredient = new Ingredient { Name = entry.Name },
-                    Quantity = quantity,
-                    Unit = unit,
+                    Quantity = entry.Quantity,
+                    Unit = entry.Quantity.HasValue ? entry.Unit : null,
                     Modifier = string.IsNullOrWhiteSpace(entry.Modifier) ? null : entry.Modifier
                 };
                 recipe.RecipeIngredients.Add(recipeIngredient);
@@ -601,18 +594,21 @@ public class RecipeImportExportService
         };
     }
 
-    private string? ConvertUnitToBaseUnit(MeasurementUnit unit)
+    // How a unit is written in an export: a form TryParseUnit reads back as the same unit
+    private static string ExportUnit(MeasurementUnit unit, decimal quantity) => unit switch
     {
-        // Convert display units to base units (g, ml, pieces)
-        // This matches the database storage format
-        return unit switch
-        {
-            MeasurementUnit.Grams or MeasurementUnit.Kilograms or MeasurementUnit.Ounces or MeasurementUnit.Pounds => "g",
-            MeasurementUnit.Milliliters or MeasurementUnit.Liters or MeasurementUnit.Cups or MeasurementUnit.Tablespoons or MeasurementUnit.Teaspoons or MeasurementUnit.FluidOunces => "ml",
-            MeasurementUnit.Pieces => "pieces",
-            _ => "pieces"
-        };
-    }
+        MeasurementUnit.Grams => "g",
+        MeasurementUnit.Kilograms => "kg",
+        MeasurementUnit.Ounces => "oz",
+        MeasurementUnit.Pounds => "lb",
+        MeasurementUnit.Milliliters => "ml",
+        MeasurementUnit.Liters => "l",
+        MeasurementUnit.Cups => quantity == 1 ? "cup" : "cups",
+        MeasurementUnit.Tablespoons => "tbsp",
+        MeasurementUnit.Teaspoons => "tsp",
+        MeasurementUnit.FluidOunces => "fl oz",
+        _ => "pieces"
+    };
 
     private string FormatDate(DateTime date)
     {

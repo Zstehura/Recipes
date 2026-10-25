@@ -1,5 +1,6 @@
 using System.Data.Common;
 using Microsoft.EntityFrameworkCore;
+using RecipesApp.Models;
 
 namespace RecipesApp.Data;
 
@@ -22,8 +23,10 @@ public static class DatabaseInitializer
         try
         {
             var connection = context.Database.GetDbConnection();
+            var backup = new BackupOnce(connection, logger);
             await AddModifierColumnIfMissingAsync(connection, logger);
-            await AddRecipeIngredientIdIfMissingAsync(connection, logger);
+            await AddRecipeIngredientIdIfMissingAsync(connection, backup, logger);
+            await StoreUnitsByNameAsync(connection, backup, logger);
         }
         finally
         {
@@ -44,13 +47,13 @@ public static class DatabaseInitializer
     // Upgrade 2: replace the (RecipeId, IngredientId) primary key with an Id column, so the
     // same ingredient can appear more than once in a recipe. SQLite cannot change a table's
     // primary key, so the table is rebuilt and its rows copied, inside one transaction.
-    private static async Task AddRecipeIngredientIdIfMissingAsync(DbConnection connection, ILogger logger)
+    private static async Task AddRecipeIngredientIdIfMissingAsync(DbConnection connection, BackupOnce backup, ILogger logger)
     {
         if (await ColumnExistsAsync(connection, "RecipeIngredients", "Id"))
             return;
 
         logger.LogInformation("Upgrading database: adding a surrogate key to RecipeIngredients");
-        await BackupAsync(connection, logger);
+        await backup.EnsureAsync();
 
         await using var transaction = await connection.BeginTransactionAsync();
 
@@ -79,6 +82,49 @@ public static class DatabaseInitializer
         await ExecuteAsync(connection, transaction, """CREATE INDEX "IX_RecipeIngredients_RecipeId" ON "RecipeIngredients" ("RecipeId")""");
 
         await transaction.CommitAsync();
+    }
+
+    // Upgrade 3: quantities are now stored in the unit they were entered in, with the unit by
+    // name ("Tablespoons"). Older lines were all converted to base units and stored as "g",
+    // "ml", or "pieces". Those amounts are still right, so only the unit text is renamed:
+    // 250 "g" becomes 250 "Grams". The original units ("2 tbsp") can't be recovered.
+    private static async Task StoreUnitsByNameAsync(DbConnection connection, BackupOnce backup, ILogger logger)
+    {
+        // The names are the enum's own, so they're safe to put in the SQL
+        var names = string.Join(", ", Enum.GetNames<MeasurementUnit>().Select(n => $"'{n}'"));
+        await using (var check = connection.CreateCommand())
+        {
+            check.CommandText = $"SELECT EXISTS (SELECT 1 FROM RecipeIngredients WHERE Unit IS NOT NULL AND Unit NOT IN ({names}))";
+            if (Convert.ToInt64(await check.ExecuteScalarAsync()) == 0)
+                return;
+        }
+
+        logger.LogInformation("Upgrading database: storing recipe ingredient units by name");
+        await backup.EnsureAsync();
+
+        // Anything unrecognized was always read as pieces, so it stays pieces
+        await ExecuteAsync(connection, null, $"""
+            UPDATE RecipeIngredients
+            SET Unit = CASE Unit WHEN 'g' THEN 'Grams' WHEN 'ml' THEN 'Milliliters' ELSE 'Pieces' END
+            WHERE Unit IS NOT NULL AND Unit NOT IN ({names})
+            """);
+    }
+
+    /// <summary>
+    /// Backs the database up before the first upgrade step that changes it, and only once per
+    /// startup, however many steps run.
+    /// </summary>
+    private sealed class BackupOnce(DbConnection connection, ILogger logger)
+    {
+        private bool _done;
+
+        public async Task EnsureAsync()
+        {
+            if (_done)
+                return;
+            _done = true;
+            await BackupAsync(connection, logger);
+        }
     }
 
     /// <summary>

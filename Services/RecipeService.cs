@@ -278,27 +278,15 @@ public class RecipeService : IRecipeReader
                 _context.Ingredients.Add(ingredient);
             }
 
-            // Convert quantity and unit to base unit
-            decimal? baseQuantity = null;
-            string? baseUnit = null;
-
-            if (entry.Quantity.HasValue)
-            {
-                var (convertedQuantity, convertedUnit) = UnitConversionService.ConvertToBaseUnit(
-                    entry.Quantity.Value,
-                    entry.Unit);
-                baseQuantity = convertedQuantity;
-                baseUnit = convertedUnit;
-            }
-
             // Add recipe ingredient relationship
             var modifier = string.IsNullOrWhiteSpace(entry.Modifier) ? null : entry.Modifier.Trim();
             recipe.RecipeIngredients.Add(new RecipeIngredient
             {
                 Recipe = recipe,
                 Ingredient = ingredient,
-                Quantity = baseQuantity,
-                Unit = baseUnit,
+                // Kept as entered; the grocery list converts when it adds amounts up
+                Quantity = entry.Quantity,
+                Unit = entry.Quantity.HasValue ? entry.Unit : null,
                 Modifier = modifier
             });
         }

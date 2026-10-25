@@ -12,11 +12,14 @@ public class RecipeIngredient
     public int IngredientId { get; set; }
     public Ingredient Ingredient { get; set; } = null!;
 
-    // Quantity stored in base unit (grams for weight, milliliters for volume, pieces for count)
+    // Quantity and unit as entered ("2 tbsp"), so the recipe shows and edits the way it was
+    // written. They're converted to base units only where amounts are added up (the grocery
+    // list). Lines saved before this was the case are in grams, milliliters, or pieces.
+    // No quantity (e.g. "salt to taste") means no unit either.
     public decimal? Quantity { get; set; }
 
-    // Unit stored as base unit string ("g", "ml", or "pieces")
-    public string? Unit { get; set; }
+    // Stored by name ("Tablespoons") in the existing text column
+    public MeasurementUnit? Unit { get; set; }
 
     // Preparation modifier (e.g., "sliced", "diced", "chopped")
     public string? Modifier { get; set; }

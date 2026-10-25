@@ -148,12 +148,84 @@ public sealed class DatabaseInitializerTests : IDisposable
 
         var flour = lines.Single(ri => ri.IngredientId == flourId);
         flour.Quantity.ShouldBe(250m);
-        flour.Unit.ShouldBe("g");
+        flour.Unit.ShouldBe(MeasurementUnit.Grams);   // "g" renamed by upgrade 3
         flour.Modifier.ShouldBe(expectedFlourModifier);
 
         var eggs = lines.Single(ri => ri.IngredientId == eggsId);
         eggs.Quantity.ShouldBe(2m);
-        eggs.Unit.ShouldBe("pieces");
+        eggs.Unit.ShouldBe(MeasurementUnit.Pieces);
+    }
+
+    /// <summary>
+    /// The format just before units were stored by name: the current schema, but every line in
+    /// base units written as "g", "ml", or "pieces".
+    /// </summary>
+    private static int CreateBaseUnitDatabase(RecipeDbContext context, params (string Unit, string Quantity)[] lines)
+    {
+        context.Database.EnsureCreated();
+        var recipe = new Recipe { Name = "Curry", Instructions = "Cook.", CookingTime = 20, Servings = 2 };
+        context.Add(recipe);
+        for (var i = 0; i < lines.Length; i++)
+        {
+            context.Add(new Ingredient { Name = $"Ingredient {i}" });
+        }
+        context.SaveChanges();
+
+        var ingredientIds = context.Ingredients.OrderBy(i => i.Name).Select(i => i.Id).ToList();
+        for (var i = 0; i < lines.Length; i++)
+        {
+            context.Database.ExecuteSqlRaw(
+                """INSERT INTO RecipeIngredients (RecipeId, IngredientId, Quantity, Unit) VALUES ({0}, {1}, {2}, {3})""",
+                recipe.Id, ingredientIds[i], lines[i].Quantity, lines[i].Unit);
+        }
+        return recipe.Id;
+    }
+
+    private static List<string?> StoredUnits(RecipeDbContext context) => context.Database
+        .SqlQueryRaw<string?>("SELECT Unit AS Value FROM RecipeIngredients ORDER BY IngredientId").ToList();
+
+    [Fact]
+    public async Task InitializeAsync_BaseUnitText_IsRenamedToUnitNames_KeepingQuantities()
+    {
+        using var context = CreateInMemoryContext();
+        CreateBaseUnitDatabase(context, ("g", "600.0"), ("ml", "14.7868"), ("pieces", "2.0"), ("??", "1.0"));
+
+        await InitializeAsync(context);
+
+        StoredUnits(context).ShouldBe(new[] { "Grams", "Milliliters", "Pieces", "Pieces" });
+        var lines = await context.RecipeIngredients.AsNoTracking().OrderBy(ri => ri.IngredientId).ToListAsync();
+        lines.Select(ri => ri.Quantity).ShouldBe(new decimal?[] { 600m, 14.7868m, 2m, 1m });
+    }
+
+    [Fact]
+    public async Task InitializeAsync_LinesWithoutAUnit_StayWithoutOne()
+    {
+        using var context = CreateInMemoryContext();
+        var id = CreateBaseUnitDatabase(context, ("g", "1.0"));
+        var salt = new Ingredient { Name = "Salt" };
+        context.Add(salt);
+        context.SaveChanges();
+        context.Database.ExecuteSqlRaw("INSERT INTO RecipeIngredients (RecipeId, IngredientId) VALUES ({0}, {1})", id, salt.Id);
+
+        await InitializeAsync(context);
+
+        StoredUnits(context).ShouldBe(new[] { "Grams", null });
+    }
+
+    [Fact]
+    public async Task InitializeAsync_BaseUnitFileDatabase_WritesOneBackup_AndNotAgain()
+    {
+        var path = NewTempDatabasePath();
+        using (var context = CreateContext($"Data Source={path}"))
+        {
+            CreateBaseUnitDatabase(context, ("g", "250.0"));
+            await InitializeAsync(context);
+            await InitializeAsync(context);
+        }
+
+        var backup = Directory.GetFiles(Path.GetDirectoryName(path)!, Path.GetFileName(path) + ".backup-*").ShouldHaveSingleItem();
+        using var backupContext = CreateContext($"Data Source={backup};Mode=ReadOnly");
+        StoredUnits(backupContext).ShouldBe(new[] { "g" });
     }
 
     [Fact]

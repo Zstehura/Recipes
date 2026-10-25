@@ -58,7 +58,7 @@ public class RecipeDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.Property(e => e.Quantity).HasPrecision(18, 4);
-            entity.Property(e => e.Unit).HasMaxLength(20);
+            entity.Property(e => e.Unit).HasConversion<string>().HasMaxLength(20);
             entity.Property(e => e.Modifier).HasMaxLength(100);
         });
     }

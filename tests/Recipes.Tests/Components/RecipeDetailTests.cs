@@ -87,6 +87,22 @@ public sealed class RecipeDetailTests : ComponentTestBase
     }
 
     [Fact]
+    public void Ingredients_ShowTheUnitTheyWereEnteredIn()
+    {
+        var id = Db.SeedRecipe("Curry", new (string, decimal?, string?, string?)[]
+        {
+            ("Curry powder", 2m, "Tablespoons", null),
+            ("Rice", 1.5m, "Cups", null),
+            ("Stock", 1m, "Cups", null),
+        });
+
+        var cut = RenderDetail(id);
+
+        cut.FindAll(".ingredient-check span").Select(s => s.TextContent.Trim())
+            .ShouldBe(new[] { "2 tbsp Curry powder", "1.5 cups Rice", "1 cup Stock" });
+    }
+
+    [Fact]
     public void Ingredients_ShowAReadableAmount_WithNoUnitForCounts()
     {
         var id = SeedPancakes();

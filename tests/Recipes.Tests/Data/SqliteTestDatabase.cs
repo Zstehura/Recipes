@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Recipes.Tests.TestData;
 using RecipesApp.Data;
 using RecipesApp.Models;
 
@@ -51,7 +52,8 @@ public sealed class SqliteTestDatabase : IDisposable
 
     /// <summary>
     /// Inserts a recipe directly (bypassing the services) and returns its ID. Ingredients are
-    /// given as base-unit tuples and are created if they don't exist yet.
+    /// given as tuples (units as "g", "ml", "pieces", or a <see cref="MeasurementUnit"/> name) and
+    /// are created if they don't exist yet.
     /// </summary>
     public int SeedRecipe(
         string name,
@@ -89,7 +91,7 @@ public sealed class SqliteTestDatabase : IDisposable
             {
                 Ingredient = ingredient,
                 Quantity = quantity,
-                Unit = unit,
+                Unit = TestUnits.Parse(unit),
                 Modifier = modifier,
             });
         }

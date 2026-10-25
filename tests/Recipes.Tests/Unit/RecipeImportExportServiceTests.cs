@@ -106,32 +106,32 @@ public class RecipeImportExportServiceTests
     // ---------------------------------------------------------------- Parsing: ingredient lines
 
     [Theory]
-    [InlineData("250g flour", 250, "g", "flour")]
-    [InlineData("250 g flour", 250, "g", "flour")]
-    [InlineData("250 grams flour", 250, "g", "flour")]
-    [InlineData("100ml milk", 100, "ml", "milk")]
-    [InlineData("1.5 l water", 1500, "ml", "water")]
-    [InlineData("2 pieces eggs", 2, "pieces", "eggs")]
-    [InlineData("3 eggs", 3, "pieces", "eggs")]
-    [InlineData("3 large eggs", 3, "pieces", "large eggs")]
-    [InlineData("2 cloves garlic", 2, "pieces", "cloves garlic")]
-    [InlineData("1 TBSP oil", 14.7868, "ml", "oil")]
+    [InlineData("250g flour", 250, MeasurementUnit.Grams, "flour")]
+    [InlineData("250 g flour", 250, MeasurementUnit.Grams, "flour")]
+    [InlineData("250 grams flour", 250, MeasurementUnit.Grams, "flour")]
+    [InlineData("100ml milk", 100, MeasurementUnit.Milliliters, "milk")]
+    [InlineData("1.5 l water", 1.5, MeasurementUnit.Liters, "water")]
+    [InlineData("2 pieces eggs", 2, MeasurementUnit.Pieces, "eggs")]
+    [InlineData("3 eggs", 3, MeasurementUnit.Pieces, "eggs")]
+    [InlineData("3 large eggs", 3, MeasurementUnit.Pieces, "large eggs")]
+    [InlineData("2 cloves garlic", 2, MeasurementUnit.Pieces, "cloves garlic")]
+    [InlineData("1 TBSP oil", 1, MeasurementUnit.Tablespoons, "oil")]
     public void ParseRecipeText_IngredientLine_ParsesQuantityUnitAndName(
-        string line, double expectedQuantity, string expectedBaseUnit, string expectedName)
+        string line, double expectedQuantity, MeasurementUnit expectedUnit, string expectedName)
     {
         var ingredient = ParseSingleIngredient(line);
 
         ingredient.Quantity.ShouldBe((decimal)expectedQuantity);
-        ingredient.Unit.ShouldBe(expectedBaseUnit);
+        ingredient.Unit.ShouldBe(expectedUnit);
         ingredient.Ingredient.Name.ShouldBe(expectedName);
     }
 
     [Theory]
-    [InlineData("1/2 tsp salt", 2.46446)]
-    [InlineData("3/4 cup sugar", 177.441)]
-    [InlineData("1 1/4 cups sugar", 295.735)]
+    [InlineData("1/2 tsp salt", 0.5)]
+    [InlineData("3/4 cup sugar", 0.75)]
+    [InlineData("1 1/4 cups sugar", 1.25)]
     [InlineData("2 1/2 eggs", 2.5)]
-    public void ParseRecipeText_FractionQuantity_ConvertsToDecimalInBaseUnit(string line, double expected)
+    public void ParseRecipeText_FractionQuantity_ConvertsToDecimal(string line, double expected)
     {
         ParseSingleIngredient(line).Quantity.ShouldBe((decimal)expected);
     }
@@ -184,16 +184,17 @@ public class RecipeImportExportServiceTests
     }
 
     [Theory]
-    [InlineData("2 cups milk", 473.176, "ml")]
-    [InlineData("1 kg flour", 1000, "g")]
-    [InlineData("1 tbsp oil", 14.7868, "ml")]
-    public void ParseRecipeText_NonBaseUnit_ConvertsQuantityToBaseUnit(
-        string line, double expectedQuantity, string expectedBaseUnit)
+    [InlineData("2 cups milk", 2, MeasurementUnit.Cups)]
+    [InlineData("1 kg flour", 1, MeasurementUnit.Kilograms)]
+    [InlineData("1 tbsp oil", 1, MeasurementUnit.Tablespoons)]
+    public void ParseRecipeText_AnyUnit_KeepsTheQuantityAsWritten(
+        string line, double expectedQuantity, MeasurementUnit expectedUnit)
     {
+        // Older versions converted to base units here ("2 cups" became 473.176 ml)
         var ingredient = ParseSingleIngredient(line);
 
         ingredient.Quantity.ShouldBe((decimal)expectedQuantity);
-        ingredient.Unit.ShouldBe(expectedBaseUnit);
+        ingredient.Unit.ShouldBe(expectedUnit);
     }
 
     [Theory]
@@ -206,8 +207,8 @@ public class RecipeImportExportServiceTests
     {
         var ingredient = ParseSingleIngredient(line);
 
-        ingredient.Quantity.ShouldBe(59.147m);
-        ingredient.Unit.ShouldBe("ml");
+        ingredient.Quantity.ShouldBe(2m);
+        ingredient.Unit.ShouldBe(MeasurementUnit.FluidOunces);
         ingredient.Ingredient.Name.ShouldBe("cream");
     }
 
@@ -216,7 +217,7 @@ public class RecipeImportExportServiceTests
     {
         var ingredient = ParseSingleIngredient("2 flowers");
 
-        ingredient.Unit.ShouldBe("pieces");
+        ingredient.Unit.ShouldBe(MeasurementUnit.Pieces);
         ingredient.Ingredient.Name.ShouldBe("flowers");
     }
 
@@ -402,9 +403,11 @@ public class RecipeImportExportServiceTests
     }
 
     [Fact]
-    public void ParseRecipeText_QuantityTooLargeToConvert_ReturnsError()
+    public void ParseRecipeText_QuantityTooLargeForADecimal_ReturnsError()
     {
-        var text = RecipeTextBuilder.Build(ingredients: new[] { "79228162514264337593543950335 kg flour" });
+        // The largest decimal plus one. (Amounts in range but over 1,000,000 parse, and are
+        // then refused by RecipeValidator when the recipe is saved.)
+        var text = RecipeTextBuilder.Build(ingredients: new[] { "79228162514264337593543950335 1/1 kg flour" });
 
         var (recipes, errors) = _service.ParseRecipeText(text);
 
@@ -426,10 +429,10 @@ public class RecipeImportExportServiceTests
         ModifiedDate = new DateTime(2024, 2, 1),
         RecipeIngredients =
         {
-            // Stored the way the database stores them: base units only
-            new RecipeIngredient { Ingredient = new Ingredient { Name = "Milk" }, Quantity = 473.176m, Unit = "ml" },
-            new RecipeIngredient { Ingredient = new Ingredient { Name = "Flour" }, Quantity = 250m, Unit = "g" },
-            new RecipeIngredient { Ingredient = new Ingredient { Name = "Eggs" }, Quantity = 2m, Unit = "pieces", Modifier = "beaten" },
+            // Stored as entered, the way the database stores them
+            new RecipeIngredient { Ingredient = new Ingredient { Name = "Milk" }, Quantity = 1.5m, Unit = MeasurementUnit.Cups },
+            new RecipeIngredient { Ingredient = new Ingredient { Name = "Flour" }, Quantity = 250m, Unit = MeasurementUnit.Grams },
+            new RecipeIngredient { Ingredient = new Ingredient { Name = "Eggs" }, Quantity = 2m, Unit = MeasurementUnit.Pieces, Modifier = "beaten" },
         },
     };
 
@@ -461,9 +464,9 @@ public class RecipeImportExportServiceTests
         var start = Array.IndexOf(lines, "===== INGREDIENTS =====") + 1;
         lines.Skip(start).Take(3).ShouldBe(new[]
         {
-            "2pieces Eggs (beaten)",
-            "250g Flour",
-            "473.176ml Milk",
+            "2 pieces Eggs (beaten)",
+            "250 g Flour",
+            "1.5 cups Milk",
         });
     }
 
@@ -495,7 +498,7 @@ public class RecipeImportExportServiceTests
 
             var lines = _service.ExportRecipeToText(CreateStoredRecipe()).Split(Environment.NewLine);
 
-            lines.ShouldContain("473.176ml Milk");
+            lines.ShouldContain("1.5 cups Milk");
             lines.ShouldContain("Created: 2024-01-15");
         }
         finally
@@ -559,6 +562,41 @@ public class RecipeImportExportServiceTests
         importedIngredients.ShouldBe(originalIngredients);
     }
 
+    [Theory]
+    [MemberData(nameof(AllUnits))]
+    public void ExportThenImport_EveryUnit_ComesBackAsTheSameUnit(MeasurementUnit unit)
+    {
+        foreach (var quantity in new[] { 1m, 2.5m })
+        {
+            var recipe = CreateStoredRecipe();
+            recipe.RecipeIngredients.Clear();
+            recipe.RecipeIngredients.Add(new RecipeIngredient { Ingredient = new Ingredient { Name = "Stock" }, Quantity = quantity, Unit = unit });
+
+            var (recipes, _) = _service.ParseRecipeText(_service.ExportRecipeToText(recipe));
+
+            var line = recipes.ShouldHaveSingleItem().RecipeIngredients.ShouldHaveSingleItem();
+            line.Quantity.ShouldBe(quantity);
+            line.Unit.ShouldBe(unit);
+            line.Ingredient.Name.ShouldBe("Stock");
+        }
+    }
+
+    public static TheoryData<MeasurementUnit> AllUnits() => new(Enum.GetValues<MeasurementUnit>());
+
+    [Fact]
+    public void ExportRecipeToText_TidiesStoredNumbers()
+    {
+        var recipe = CreateStoredRecipe();
+        recipe.RecipeIngredients.Clear();
+        recipe.RecipeIngredients.Add(new RecipeIngredient { Ingredient = new Ingredient { Name = "Oil" }, Quantity = 14.7868m, Unit = MeasurementUnit.Milliliters });
+        recipe.RecipeIngredients.Add(new RecipeIngredient { Ingredient = new Ingredient { Name = "Rice" }, Quantity = 200.0000m, Unit = MeasurementUnit.Grams });
+
+        var lines = _service.ExportRecipeToText(recipe).Split(Environment.NewLine);
+
+        lines.ShouldContain("14.79 ml Oil");     // saved as base units by an older version
+        lines.ShouldContain("200 g Rice");
+    }
+
     [Fact]
     public void ExportThenImport_MultipleRecipes_RoundTripsAll()
     {
@@ -596,7 +634,7 @@ public class RecipeImportExportServiceTests
             var (recipes, _) = _service.ParseRecipeText(_service.ExportRecipeToText(CreateStoredRecipe()));
 
             recipes.ShouldHaveSingleItem().RecipeIngredients
-                .Single(ri => ri.Ingredient.Name == "Milk").Quantity.ShouldBe(473.176m);
+                .Single(ri => ri.Ingredient.Name == "Milk").Quantity.ShouldBe(1.5m);
         }
         finally
         {

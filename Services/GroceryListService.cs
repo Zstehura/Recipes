@@ -63,8 +63,10 @@ public class GroceryListService
             {
                 var ingredientName = recipeIngredient.Ingredient.Name;
                 var modifier = recipeIngredient.Modifier ?? "";
-                var baseUnit = recipeIngredient.Unit ?? UnitConversionService.BASE_COUNT_UNIT;
-                var quantity = recipeIngredient.Quantity ?? 0m;
+                // Amounts are stored as entered, so convert to grams / ml / pieces to add them up
+                var (quantity, baseUnit) = UnitConversionService.ConvertToBaseUnit(
+                    recipeIngredient.Quantity ?? 0m,
+                    recipeIngredient.Unit ?? MeasurementUnit.Pieces);
                 var adjustedQuantity = quantity * multiplier;
 
                 // Group by ingredient name + modifier so "tomato (sliced)" and "tomato (diced)" stay separate

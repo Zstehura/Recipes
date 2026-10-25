@@ -27,7 +27,7 @@ The app was renamed from "Recipes" to Home Recipe Repo. The repository, solution
 - **Built for phones first:** a bottom navigation bar, large touch targets, and layouts that work one-handed at 390 px wide, while still using the extra space on a desktop
 - **Recipes:** create, edit, and delete recipes with ingredients, instructions, cooking time, servings, tags, notes, and a photo. Deleting asks for confirmation first
 - **Cooking view:** a large, readable recipe page where you tap ingredients to cross them off as you go. The ticks survive a reload or switching apps
-- **Ingredient library:** one shared list of ingredients, with default units, renaming, and merging of duplicates
+- **Ingredient library:** one shared list of ingredients, with default units, renaming, and merging of duplicates. Amounts keep the unit they were entered in ("2 tbsp", "1.5 cups")
 - **Search and filtering:** search by name, ingredient, or tag, and filter by cooking time, servings, and tags
 - **Search by ingredient:** pick ingredients and find the recipes that use all of them
 - **Grocery list:** pick recipes, set how many batches of each, and get one combined list. Quantities are added up across recipes and shown in readable units (for example 1.2 kg rather than 1200 g). Copy the list, or share it straight to another app where the browser supports it
@@ -225,7 +225,7 @@ Not covered by automated tests:
 
 **Database upgrades without EF migrations.** The database is created with `EnsureCreated`, which builds a new database but never changes an existing one. Each schema change since then has a small, idempotent upgrade step in `Data/DatabaseInitializer.cs` that runs at startup, backs up the database first, and is covered by tests against the old format. EF Core migrations are the standard tool and the natural next step if the schema keeps changing; adopting them would mean baselining existing databases, which wasn't worth the risk for the two changes so far.
 
-**Quantities stored in base units.** Every quantity is stored as grams, milliliters, or pieces. That makes adding up quantities across recipes for the grocery list simple and exact. The trade-off is that the original unit isn't kept: "2 cups" is stored as 473.176 ml and shown as 473.18 ml when the recipe is edited.
+**Quantities stored as entered, converted only to add them up.** A line is stored with the quantity and unit it was entered in ("2 tbsp"), so the recipe page, the edit form, and exports show it the way it was written. The grocery list converts each line to grams, milliliters, or pieces when it adds amounts up across recipes, which is the only place a common unit is needed. Earlier versions stored everything in base units, which made the totals simple but showed "2 tbsp" as "29.57 ml" everywhere else. Recipes saved before the change keep their base-unit amounts (the original units can't be recovered), shown rounded to two decimal places. The unit is stored by name in the existing text column, so the upgrade only renamed "g", "ml", and "pieces"; the schema didn't change.
 
 **Images stored in the database.** Photos are BLOBs in SQLite, so the database file is a complete backup with nothing else to keep in sync, and no user-supplied file names ever reach the file system. List and detail queries exclude the image bytes, and images are served separately by recipe ID.
 
@@ -267,7 +267,7 @@ Alternatives considered:
 - **Photos aren't kept in drafts.** They can be up to 10 MB, too much for browser storage, so a photo has to be chosen again after a draft is restored. The notice says so.
 - **The last few keystrokes can be lost** if a phone suspends the page before the field being typed in has sent its value. Everything up to the previous field is kept.
 - **Large pasted imports may fail.** Blazor limits messages from the browser to 32 KB, so pasting more text than that into the import box is likely to disconnect the page. Use the file upload for large imports (up to 1 MB).
-- **Original units aren't kept** (see [Design decisions](#design-decisions)).
+- **Recipes saved by older versions show base units.** Their amounts were converted to grams, milliliters, or pieces when saved, so "2 tbsp" from back then still reads "29.57 ml" until the recipe is edited (see [Design decisions](#design-decisions)).
 - **No Content Security Policy yet.** All scripts are now static files (the import page's inline script was moved), so the remaining work is choosing a policy and testing that Blazor Server's script and connection work under it.
 
 ## Import format

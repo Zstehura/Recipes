@@ -16,7 +16,7 @@ public class GroceryListServiceTests
             {
                 Ingredient = new Ingredient { Name = name },
                 Quantity = quantity,
-                Unit = unit,
+                Unit = Recipes.Tests.TestData.TestUnits.Parse(unit),
                 Modifier = modifier,
             });
         }
@@ -41,6 +41,21 @@ public class GroceryListServiceTests
         var list = GroceryListService.BuildGroceryList(recipes, new() { [1] = 1, [2] = 1 });
 
         ItemLines(list).ShouldBe(new[] { "- 500 g Flour" });
+    }
+
+    [Fact]
+    public void BuildGroceryList_LinesInDifferentUnits_AreConvertedBeforeAdding()
+    {
+        var recipes = new List<Recipe>
+        {
+            CreateRecipe(1, ("Flour", 1m, "Kilograms", null)),
+            CreateRecipe(2, ("Flour", 500m, "g", null)),
+            CreateRecipe(3, ("Milk", 2m, "Tablespoons", null), ("Milk", 100m, "ml", null)),
+        };
+
+        var list = GroceryListService.BuildGroceryList(recipes, new() { [1] = 1, [2] = 1, [3] = 1 });
+
+        ItemLines(list).ShouldBe(new[] { "- 1.5 kg Flour", "- 129.57 ml Milk" });
     }
 
     [Fact]
