@@ -8,81 +8,53 @@
 @inject IJSRuntime JSRuntime
 @inject ILogger<ImportExport> Logger
 
-<PageTitle>Import/Export Recipes</PageTitle>
+<PageTitle>Import and Export</PageTitle>
 
-<h1>Import/Export Recipes</h1>
+<h1 class="h3 mb-3">Import and export</h1>
 
-<!-- Export Section -->
-<div class="card mb-4">
-    <div class="card-header">
-        <h5 class="mb-0"><span class="bi bi-download"></span> Export Recipes</h5>
-    </div>
-    <div class="card-body">
-        <p>Export all your recipes to a text file that can be edited and re-imported later.</p>
-        <button class="btn btn-primary" @onclick="ExportRecipes" disabled="@isExporting">
-            <span class="bi bi-download"></span> @(isExporting ? "Exporting..." : "Export All Recipes")
-        </button>
+<section class="mb-4" aria-labelledby="export-heading">
+    <h2 id="export-heading" class="h5">Export</h2>
+    <p>Save all your recipes to a text file you can edit and import again later.</p>
+    <button type="button" class="btn btn-primary" @onclick="ExportRecipes" disabled="@isExporting">
+        <span class="bi bi-download" aria-hidden="true"></span> @(isExporting ? "Exporting..." : "Export all recipes")
+    </button>
+    <div aria-live="polite">
         @if (!string.IsNullOrEmpty(exportMessage))
         {
             <div class="alert alert-info mt-3 mb-0">@exportMessage</div>
         }
     </div>
-</div>
+</section>
 
-<!-- Import Section -->
-<div class="card mb-4">
-    <div class="card-header">
-        <h5 class="mb-0"><span class="bi bi-upload"></span> Import Recipes</h5>
-    </div>
-    <div class="card-body">
-        <p>Upload a text file or paste recipe text directly. See the format guide below for details.</p>
+<section class="mb-4" aria-labelledby="import-heading">
+    <h2 id="import-heading" class="h5">Import</h2>
+    <p>Paste recipe text or choose a text file. The format guide below shows how to write it.</p>
 
-        <!-- Tab Navigation -->
-        <ul class="nav nav-tabs mb-3">
-            <li class="nav-item">
-                <button class="nav-link @(importMode == "text" ? "active" : "")" @onclick="() => SetImportMode(2)">
-                    <span class="bi bi-clipboard"></span> Paste Text
-                </button>
-            </li>
-            <li class="nav-item">
-                <button class="nav-link @(importMode == "file" ? "active" : "")" @onclick="() => SetImportMode(1)">
-                    <span class="bi bi-file-earmark-arrow-up"></span> Upload File
-                </button>
-            </li>
-        </ul>
+    <label for="import-text" class="form-label">Recipe text</label>
+    <textarea id="import-text" class="form-control font-monospace mb-2" rows="8" @bind="pastedText"
+              placeholder="===== RECIPE =====" spellcheck="false"></textarea>
+    <button type="button" class="btn btn-outline-primary mb-3" @onclick="ParsePastedText"
+            disabled="@(isProcessing || string.IsNullOrWhiteSpace(pastedText))">
+        Read text
+    </button>
 
-        <!-- File Upload Tab -->
-        @if (importMode == "file")
-        {
-            <div class="mb-3">
-                <InputFile OnChange="HandleFileSelected" class="form-control" accept=".txt" />
-            </div>
-        }
+    <label for="import-file" class="form-label d-block">Or choose a text file</label>
+    <InputFile id="import-file" OnChange="HandleFileSelected" class="form-control mb-3" accept=".txt" />
 
-        <!-- Text Paste Tab -->
-        @if (importMode == "text")
-        {
-            <div class="mb-3">
-                <label class="form-label">Paste your recipe text here:</label>
-                <textarea class="form-control font-monospace" rows="10" @bind="pastedText" placeholder="See below for format details"></textarea>
-            </div>
-            <button class="btn btn-primary mb-3" @onclick="ParsePastedText" disabled="@(isProcessing || string.IsNullOrWhiteSpace(pastedText))">
-                <span class="bi bi-file-text"></span> Parse Text
-            </button>
-        }
-
+    @* Results of reading the text appear here; screen readers announce them *@
+    <div aria-live="polite">
         @if (isProcessing)
         {
             <div class="alert alert-info">
-                <span class="spinner-border spinner-border-sm me-2"></span>
-                Processing file...
+                <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                Reading recipes...
             </div>
         }
 
         @if (importErrors.Any())
         {
             <div class="alert alert-warning">
-                <h6 class="alert-heading"><span class="bi bi-exclamation-triangle"></span> Import Warnings</h6>
+                <h3 class="h6 alert-heading"><span class="bi bi-exclamation-triangle" aria-hidden="true"></span> Import warnings</h3>
                 <ul class="mb-0">
                     @foreach (var error in importErrors)
                     {
@@ -92,72 +64,47 @@
             </div>
         }
 
-        @if (parsedRecipes.Any())
-        {
-            <div class="alert alert-success">
-                <span class="bi bi-check-circle"></span> Found @parsedRecipes.Count recipe(s) ready to import
-            </div>
-
-            <div class="table-responsive mb-3">
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Cooking Time</th>
-                            <th>Servings</th>
-                            <th>Ingredients</th>
-                            <th>Tags</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var recipe in parsedRecipes)
-                        {
-                            <tr>
-                                <td>@recipe.Name</td>
-                                <td>@recipe.CookingTime min</td>
-                                <td>@recipe.Servings</td>
-                                <td>@recipe.RecipeIngredients.Count</td>
-                                <td>@(string.IsNullOrWhiteSpace(recipe.Tags) ? "-" : recipe.Tags)</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-
-            <button class="btn btn-success" @onclick="ConfirmImport" disabled="@isImporting">
-                <span class="bi bi-check-circle"></span> @(isImporting ? "Importing..." : "Confirm Import")
-            </button>
-            <button class="btn btn-secondary ms-2" @onclick="CancelImport" disabled="@isImporting">
-                Cancel
-            </button>
-        }
-
         @if (!string.IsNullOrEmpty(importSuccessMessage))
         {
-            <div class="alert alert-success mt-3 mb-0">
-                <span class="bi bi-check-circle"></span> @importSuccessMessage
+            <div class="alert alert-success">
+                <span class="bi bi-check-circle" aria-hidden="true"></span> @importSuccessMessage
             </div>
         }
-    </div>
-</div>
 
-<!-- Format Documentation Section -->
-<div class="card">
-    <div class="card-header">
-        <button class="btn btn-link text-decoration-none w-100 text-start p-0" @onclick="ToggleFormatHelp">
-            <h5 class="mb-0">
-                <span class="bi bi-@(showFormatHelp ? "chevron-down" : "chevron-right")"></span>
-                Format Guide
-            </h5>
-        </button>
+        @if (parsedRecipes.Any())
+        {
+            <h3 class="h6">@RecipeCount(parsedRecipes.Count) ready to import</h3>
+        }
     </div>
-    @if (showFormatHelp)
+
+    @if (parsedRecipes.Any())
     {
-        <div class="card-body">
-            <h6>Recipe Format Structure</h6>
-            <p>Each recipe must follow this structure with specific delimiters:</p>
+        <ul class="import-preview">
+            @foreach (var recipe in parsedRecipes)
+            {
+                <li>
+                    <span class="import-preview-name">@recipe.Name</span>
+                    <span class="import-preview-meta">@PreviewMeta(recipe)</span>
+                </li>
+            }
+        </ul>
 
-            <pre class="bg-light p-3 border rounded"><code>===== RECIPE =====
+        <div class="action-bar">
+            <span class="action-bar-status">@RecipeCount(parsedRecipes.Count)</span>
+            <button type="button" class="btn btn-outline-secondary" @onclick="CancelImport" disabled="@isImporting">Cancel</button>
+            <button type="button" class="btn btn-primary" @onclick="ConfirmImport" disabled="@isImporting">
+                @(isImporting ? "Importing..." : "Import")
+            </button>
+        </div>
+    }
+</section>
+
+<details class="form-extras">
+    <summary>Format guide</summary>
+    <h3 class="h6">Recipe Format Structure</h3>
+    <p>Each recipe must follow this structure with specific delimiters:</p>
+
+    <pre class="bg-light p-3 border rounded"><code>===== RECIPE =====
 Name: Chocolate Chip Cookies
 Cooking Time: 25 minutes
 Servings: 24
@@ -187,104 +134,103 @@ Best served warm. Store in airtight container for up to 5 days.
 
 ===== END RECIPE =====</code></pre>
 
-            <h6 class="mt-4">Required Fields</h6>
-            <ul>
-                <li><strong>Name:</strong> Recipe name (max 200 characters)</li>
-                <li><strong>Cooking Time:</strong> Number of minutes (accepts "30", "30 min", or "30 minutes")</li>
-                <li><strong>Servings:</strong> Number of servings (must be at least 1)</li>
-                <li><strong>Instructions:</strong> Step-by-step cooking instructions</li>
-            </ul>
+    <h3 class="h6 mt-4">Required Fields</h3>
+    <ul>
+        <li><strong>Name:</strong> Recipe name (max 200 characters)</li>
+        <li><strong>Cooking Time:</strong> Number of minutes (accepts "30", "30 min", or "30 minutes")</li>
+        <li><strong>Servings:</strong> Number of servings (must be at least 1)</li>
+        <li><strong>Instructions:</strong> Step-by-step cooking instructions</li>
+    </ul>
 
-            <h6 class="mt-4">Optional Fields</h6>
-            <ul>
-                <li><strong>Tags:</strong> Comma-separated list of tags (e.g., "Italian,Vegetarian,Quick")</li>
-                <li><strong>Notes:</strong> Additional notes about the recipe</li>
-            </ul>
+    <h3 class="h6 mt-4">Optional Fields</h3>
+    <ul>
+        <li><strong>Tags:</strong> Comma-separated list of tags (e.g., "Italian,Vegetarian,Quick")</li>
+        <li><strong>Notes:</strong> Additional notes about the recipe</li>
+    </ul>
 
-            <h6 class="mt-4">Ingredient Format</h6>
-            <p>Format: <code>quantity unit name</code> or <code>quantity name</code> (unit defaults to pieces)</p>
-            <p>Examples:</p>
-            <ul>
-                <li><code>250g flour</code> - Space between quantity and unit is optional</li>
-                <li><code>2 cups milk</code> - Space between quantity and unit</li>
-                <li><code>3pieces eggs</code> - No space works too</li>
-                <li><code>2 eggs</code> - No unit specified, defaults to pieces</li>
-                <li><code>3/4 cup sugar</code> - Fractions are converted to decimals (0.75)</li>
-                <li><code>1 1/2 tsp vanilla</code> - Mixed fractions work too (1.5)</li>
-                <li><code>salt to taste</code> - If format doesn't match, treats entire line as ingredient name</li>
-            </ul>
-            <p class="text-muted small"><strong>Note:</strong> Ingredient names are case-insensitive. "Flour", "flour", and "FLOUR" will all match the same ingredient.</p>
+    <h3 class="h6 mt-4">Ingredient Format</h3>
+    <p>Format: <code>quantity unit name</code> or <code>quantity name</code> (unit defaults to pieces)</p>
+    <p>Examples:</p>
+    <ul>
+        <li><code>250g flour</code> - Space between quantity and unit is optional</li>
+        <li><code>2 cups milk</code> - Space between quantity and unit</li>
+        <li><code>3pieces eggs</code> - No space works too</li>
+        <li><code>2 eggs</code> - No unit specified, defaults to pieces</li>
+        <li><code>3/4 cup sugar</code> - Fractions are converted to decimals (0.75)</li>
+        <li><code>1 1/2 tsp vanilla</code> - Mixed fractions work too (1.5)</li>
+        <li><code>salt to taste</code> - If format doesn't match, treats entire line as ingredient name</li>
+    </ul>
+    <p class="text-muted small"><strong>Note:</strong> Ingredient names are case-insensitive. "Flour", "flour", and "FLOUR" will all match the same ingredient.</p>
 
-            <h6 class="mt-4">Supported Units</h6>
-            <div class="row">
-                <div class="col-md-4">
-                    <strong>Weight:</strong>
-                    <ul class="small">
-                        <li>g, gram, grams</li>
-                        <li>kg, kilogram, kilograms</li>
-                        <li>oz, ounce, ounces</li>
-                        <li>lb, lbs, pound, pounds</li>
-                    </ul>
-                </div>
-                <div class="col-md-4">
-                    <strong>Volume:</strong>
-                    <ul class="small">
-                        <li>ml, milliliter, milliliters</li>
-                        <li>l, liter, liters</li>
-                        <li>cup, cups</li>
-                        <li>tbsp, tablespoon, tablespoons</li>
-                        <li>tsp, teaspoon, teaspoons</li>
-                        <li>fl oz, floz, fluidounce</li>
-                    </ul>
-                </div>
-                <div class="col-md-4">
-                    <strong>Count:</strong>
-                    <ul class="small">
-                        <li>piece, pieces</li>
-                        <li>pcs, pc</li>
-                    </ul>
-                </div>
-            </div>
-
-            <h6 class="mt-4">Multiple Recipes</h6>
-            <p>You can include multiple recipes in a single file. Just repeat the structure above for each recipe, making sure each one ends with <code>===== END RECIPE =====</code></p>
-
-            <h6 class="mt-4">Tips for Writing Recipes</h6>
-            <ul>
-                <li>The format is flexible - reasonable spacing and formatting variations are handled automatically</li>
-                <li>If an ingredient line doesn't match the quantity+unit+name format, it will be imported as just a name</li>
-                <li>Missing optional fields (Tags, Notes) are fine - they'll just be left empty</li>
-                <li>If you're unsure, export an existing recipe to see the exact format</li>
+    <h3 class="h6 mt-4">Supported Units</h3>
+    <div class="row">
+        <div class="col-md-4">
+            <strong>Weight:</strong>
+            <ul class="small">
+                <li>g, gram, grams</li>
+                <li>kg, kilogram, kilograms</li>
+                <li>oz, ounce, ounces</li>
+                <li>lb, lbs, pound, pounds</li>
             </ul>
         </div>
-    }
-</div>
+        <div class="col-md-4">
+            <strong>Volume:</strong>
+            <ul class="small">
+                <li>ml, milliliter, milliliters</li>
+                <li>l, liter, liters</li>
+                <li>cup, cups</li>
+                <li>tbsp, tablespoon, tablespoons</li>
+                <li>tsp, teaspoon, teaspoons</li>
+                <li>fl oz, floz, fluidounce</li>
+            </ul>
+        </div>
+        <div class="col-md-4">
+            <strong>Count:</strong>
+            <ul class="small">
+                <li>piece, pieces</li>
+                <li>pcs, pc</li>
+            </ul>
+        </div>
+    </div>
+
+    <h3 class="h6 mt-4">Multiple Recipes</h3>
+    <p>You can include multiple recipes in a single file. Just repeat the structure above for each recipe, making sure each one ends with <code>===== END RECIPE =====</code></p>
+
+    <h3 class="h6 mt-4">Tips for Writing Recipes</h3>
+    <ul>
+        <li>The format is flexible - reasonable spacing and formatting variations are handled automatically</li>
+        <li>If an ingredient line doesn't match the quantity+unit+name format, it will be imported as just a name</li>
+        <li>Missing optional fields (Tags, Notes) are fine - they'll just be left empty</li>
+        <li>If you're unsure, export an existing recipe to see the exact format</li>
+    </ul>
+</details>
 
 @code {
     private bool isExporting = false;
     private bool isProcessing = false;
     private bool isImporting = false;
-    private bool showFormatHelp = false;
     private string exportMessage = "";
     private string importSuccessMessage = "";
-    private string importMode = "text";
     private string pastedText = "";
 
     private List<Recipe> parsedRecipes = new();
     private List<string> importErrors = new();
 
-    private void SetImportMode(int mode)
-    {
-        importMode = mode == 1 ? "file" : "text";
-        // Clear any previous import state when switching modes
-        parsedRecipes.Clear();
-        importErrors.Clear();
-        importSuccessMessage = "";
-    }
+    private static string RecipeCount(int count) => count == 1 ? "1 recipe" : $"{count} recipes";
 
-    private void ToggleFormatHelp()
+    private static string PreviewMeta(Recipe recipe)
     {
-        showFormatHelp = !showFormatHelp;
+        var parts = new List<string>
+        {
+            $"{recipe.CookingTime} min",
+            recipe.Servings == 1 ? "1 serving" : $"{recipe.Servings} servings",
+            recipe.RecipeIngredients.Count == 1 ? "1 ingredient" : $"{recipe.RecipeIngredients.Count} ingredients",
+        };
+        if (!string.IsNullOrWhiteSpace(recipe.Tags))
+        {
+            parts.Add(string.Join(", ", recipe.Tags.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)));
+        }
+        return string.Join(" · ", parts);
     }
 
     private void ParsePastedText()
@@ -335,7 +281,7 @@ Best served warm. Store in airtight container for up to 5 days.
 
             await JSRuntime.InvokeVoidAsync("downloadFile", filename, exportText);
 
-            exportMessage = $"Successfully exported {recipes.Count} recipe(s) to {filename}";
+            exportMessage = $"Exported {RecipeCount(recipes.Count)} to {filename}.";
         }
         catch (Exception ex)
         {
@@ -425,7 +371,7 @@ Best served warm. Store in airtight container for up to 5 days.
 
             if (successCount > 0)
             {
-                importSuccessMessage = $"Successfully imported {successCount} recipe(s)!";
+                importSuccessMessage = $"Successfully imported {RecipeCount(successCount)}.";
 
                 // Clear the parsed recipes after successful import
                 parsedRecipes.Clear();
@@ -459,15 +405,3 @@ Best served warm. Store in airtight container for up to 5 days.
         importSuccessMessage = "";
     }
 }
-
-<script>
-    window.downloadFile = function(filename, text) {
-        const blob = new Blob([text], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        a.click();
-        URL.revokeObjectURL(url);
-    };
-</script>

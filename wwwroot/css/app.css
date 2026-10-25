@@ -931,3 +931,36 @@ h1:focus {
     gap: 0.5rem;
     margin-top: 0.5rem;
 }
+
+/* Import and export (Pages/ImportExport.razor): the preview is a list, so it fits a phone */
+.import-preview {
+    margin: 0 0 1rem;
+    padding: 0;
+    list-style: none;
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+}
+
+.import-preview li {
+    display: flex;
+    flex-direction: column;
+    padding: 0.625rem 1rem;
+}
+
+.import-preview li + li {
+    border-top: 1px solid #e9ecef;
+}
+
+.import-preview-name {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.import-preview-meta {
+    color: #5c636a;
+    font-size: 0.875rem;
+}
+
+.form-extras pre {
+    font-size: 0.8rem;
+}
