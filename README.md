@@ -22,25 +22,31 @@ A self-hosted recipe manager built with .NET 10, Blazor Server, and SQLite. Stor
 
 ## Features
 
-- **Recipes:** create, edit, and delete recipes with ingredients, instructions, cooking time, servings, tags, notes, and a photo
+- **Built for phones first:** a bottom navigation bar, large touch targets, and layouts that work one-handed at 390 px wide, while still using the extra space on a desktop
+- **Recipes:** create, edit, and delete recipes with ingredients, instructions, cooking time, servings, tags, notes, and a photo. Deleting asks for confirmation first
+- **Cooking view:** a large, readable recipe page where you tap ingredients to cross them off as you go. The ticks survive a reload or switching apps
 - **Ingredient library:** one shared list of ingredients, with default units, renaming, and merging of duplicates
 - **Search and filtering:** search by name, ingredient, or tag, and filter by cooking time, servings, and tags
-- **Search by available ingredients:** find the recipes that use everything you've selected
-- **Grocery list:** pick recipes, set how many batches of each, and get one combined list. Quantities are added up across recipes and shown in readable units (for example 1.2 kg rather than 1200 g)
+- **Search by ingredient:** pick ingredients and find the recipes that use all of them
+- **Grocery list:** pick recipes, set how many batches of each, and get one combined list. Quantities are added up across recipes and shown in readable units (for example 1.2 kg rather than 1200 g). Copy the list, or share it straight to another app where the browser supports it
 - **Import and export:** move recipes in and out as a plain-text format (see [Import format](#import-format))
 - **Unsaved work survives:** a half-written recipe, the grocery list, and search filters come back after switching apps on a phone, a lost connection, a page reload, or a server restart
+- **Home-screen icon:** a web app manifest and icons, so a phone can add the app to its home screen and open it without the browser bar
 
 ## Screenshots
 
-> **TODO (owner):** add screenshots under `docs/screenshots/` and replace each placeholder below with an image link, e.g. `![Recipe list](docs/screenshots/recipe-list.png)`.
+Phone-width (390 px) captures from before and after the mobile-first rework.
 
-| Screen | Screenshot |
-|---|---|
-| Recipe list | _Placeholder: `docs/screenshots/recipe-list.png`_ |
-| Recipe detail | _Placeholder: `docs/screenshots/recipe-detail.png`_ |
-| Recipe form | _Placeholder: `docs/screenshots/recipe-form.png`_ |
-| Grocery list | _Placeholder: `docs/screenshots/grocery-list.png`_ |
-| Search by ingredients | _Placeholder: `docs/screenshots/search-by-ingredients.png`_ |
+> **TODO (owner):** add screenshots under `docs/screenshots/` and replace each placeholder below with an image link, e.g. `![Recipe list, after](docs/screenshots/after/recipe-list.png)`.
+
+| Screen | Before | After |
+|---|---|---|
+| Recipe list | _Placeholder: `docs/screenshots/before/recipe-list.png`_ | _Placeholder: `docs/screenshots/after/recipe-list.png`_ |
+| Recipe page (cooking view) | _Placeholder: `docs/screenshots/before/recipe-detail.png`_ | _Placeholder: `docs/screenshots/after/recipe-detail.png`_ |
+| Recipe form | _Placeholder: `docs/screenshots/before/recipe-form.png`_ | _Placeholder: `docs/screenshots/after/recipe-form.png`_ |
+| Grocery list | _Placeholder: `docs/screenshots/before/grocery-list.png`_ | _Placeholder: `docs/screenshots/after/grocery-list.png`_ |
+| Search by ingredient | _Placeholder: `docs/screenshots/before/search-by-ingredients.png`_ | _Placeholder: `docs/screenshots/after/search-by-ingredients.png`_ |
+| Ingredients | _Placeholder: `docs/screenshots/before/ingredients.png`_ | _Placeholder: `docs/screenshots/after/ingredients.png`_ |
 
 ## Tech stack
 
@@ -49,7 +55,7 @@ A self-hosted recipe manager built with .NET 10, Blazor Server, and SQLite. Stor
 | Runtime | .NET 10 (LTS) |
 | UI | Blazor Server, Bootstrap 5, Bootstrap Icons |
 | Data | Entity Framework Core 10 with SQLite |
-| Tests | xUnit, NSubstitute, Shouldly, coverlet, `WebApplicationFactory` |
+| Tests | xUnit, bUnit, NSubstitute, Shouldly, coverlet, `WebApplicationFactory` |
 | CI and security | GitHub Actions, CodeQL, Dependabot, Codecov |
 | Hosting | Docker (multi-stage build, chiseled non-root runtime image), Docker Compose |
 
@@ -154,10 +160,15 @@ Services/        Business logic:
                    UnitConversionService                   unit conversion to and from base units
                    RecipeValidator, ImageValidator         server-side validation
                    RecipeTags, IngredientEntryMapper       small shared helpers
-Services/Drafts/ Unsaved page state kept in encrypted browser storage (DraftService, IDraftStore)
+Services/Drafts/ Unsaved page state kept in encrypted browser storage (DraftService, IDraftStore),
+                 including the cooking view's crossed-off ingredients (CookingProgress)
 Pages/           Blazor pages, plus the error page
-Shared/          Layout and navigation
-wwwroot/         Static assets (CSS, JS; Bootstrap and Bootstrap Icons in lib/)
+Shared/          Layout, navigation (AppNav, NavMenu), and shared components:
+                   ConfirmDialog, OverflowMenu             confirmation dialog and "⋯" action menu
+                   RecipeCard, RecipeFilterPanel           recipe list item and the shared filters
+                   QuantityStepper, DraftNotice            batch count control, draft restore notice
+wwwroot/         Static assets: CSS, small scripts in js/, Bootstrap and Bootstrap Icons in lib/,
+                 the web app manifest and icons/
 tests/           xUnit test project (see Testing)
 .github/         CI, CodeQL, and Dependabot configuration
 ```
@@ -168,15 +179,15 @@ tests/           xUnit test project (see Testing)
 dotnet test
 ```
 
-The suite has over 300 tests and runs in about a second. CI runs it on every push and pull request, along with a formatting check and a Docker image build that is then started and smoke-tested.
+The suite has over 500 tests and runs in about a second. CI runs it on every push and pull request, along with a formatting check and a Docker image build that is then started and smoke-tested.
 
 ### Strategy
 
 | Layer | Folder | What it tests | How |
 |---|---|---|---|
-| Unit | `tests/Recipes.Tests/Unit` | Pure logic: unit conversion, import/export parsing, grocery list totals, validation, tag parsing | Plain inputs and outputs, mostly data-driven (`[Theory]`). No database |
+| Unit | `tests/Recipes.Tests/Unit` | Pure logic: unit conversion, import/export parsing, grocery list totals, validation, tag parsing, navigation and filter state, and the web app manifest against its icon files | Plain inputs and outputs, mostly data-driven (`[Theory]`). No database |
 | Data | `tests/Recipes.Tests/Data` | `RecipeService`, `IngredientService`, and the database upgrade | A real SQLite database in memory, created fresh for each test |
-| Component | `tests/Recipes.Tests/Components` | Pages saving, restoring, and clearing drafts (recipe form, grocery list, search filters) | bUnit renders the real pages against the SQLite test database, with an in-memory draft store in place of browser storage |
+| Component | `tests/Recipes.Tests/Components` | Each main page and the shared components: what it shows, labels on every field, navigation, confirmations, focus moves, and saving, restoring, and clearing drafts | bUnit renders the real pages against the SQLite test database, with an in-memory draft store in place of browser storage and faked browser calls |
 | Integration | `tests/Recipes.Tests/Integration` | The image endpoint, security headers, and the production error page | The full ASP.NET Core pipeline in memory via `WebApplicationFactory`, with a temporary database file |
 
 Principles:
@@ -185,6 +196,7 @@ Principles:
 - **Isolation:** every test gets its own database, so tests never depend on each other or on order.
 - **Failure paths, not just the happy path:** malformed and hostile input, invalid images, oversized fields, missing records, and legacy database formats.
 - **Mocks only at boundaries.** `GroceryListService` depends on a small `IRecipeReader` interface, which tests replace with an NSubstitute fake. Services whose job is talking to the database are tested against a real database instead of a mocked `DbContext`.
+- **Tests are checked by breaking the code.** For each UI change, a few deliberate bugs were introduced to confirm the new tests fail, then removed.
 - **Bugs get a test first.** Each bug found during the testing work was recorded as a failing test of the intended behavior, then fixed, so the test now guards against regressions.
 
 ### What is and isn't covered
@@ -195,9 +207,9 @@ Covered (about 95–100% line coverage per service):
 - The image endpoint, the security headers, and the error page
 
 Not covered by automated tests:
-- **Most page markup and event handling.** Pages are thin and delegate to services. bUnit tests cover the draft behavior of the pages that have it; the rest of the UI isn't component-tested yet.
-- **Browser-only behavior,** such as copying to the clipboard, downloading files, and the small scripts in `wwwroot/js` (committing a field when a phone hides the page, the reconnect banner). The end-to-end behavior was checked in headless Chrome against the real image: frozen page and network cut for 1 and 4 minutes, a server restart, and a reload.
-- **The running container, beyond a smoke test.** CI starts the built image and checks that the page, the Blazor script, and the stylesheet load and that it runs as the non-root user, but doesn't exercise the UI in a browser.
+- **Looks and layout.** Component tests check structure and behavior, not how things look. Each page was reviewed in screenshots at phone width instead, and the main pages at desktop width too.
+- **Browser-only behavior,** such as the native dialog's focus trap and Escape key, copying and sharing, downloading files, and the small scripts in `wwwroot/js` (committing a field when a phone hides the page, the reconnect banner). Component tests fake these calls. The real behavior was checked by hand in Chrome, including copying over plain HTTP. The end-to-end behavior was checked in headless Chrome against the real image: frozen page and network cut for 1 and 4 minutes, a server restart, and a reload.
+- **The running container, beyond a smoke test.** CI starts the built image and checks that the page, the Blazor script, the stylesheets, the manifest, and the icons load, and that it runs as the non-root user, but doesn't exercise the UI in a browser.
 
 ## Design decisions
 
@@ -216,12 +228,20 @@ Not covered by automated tests:
 **Images stored in the database.** Photos are BLOBs in SQLite, so the database file is a complete backup with nothing else to keep in sync, and no user-supplied file names ever reach the file system. List and detail queries exclude the image bytes, and images are served separately by recipe ID.
 
 **Unsaved work: browser drafts, plus longer circuit retention.** Reproducing the "lost work when I switch apps" bug showed the cause: Blazor Server keeps a disconnected tab's state (its circuit) for only 3 minutes by default, then deletes it. The fix has two layers:
-- *Drafts.* Pages with valuable input (recipe form, grocery list) save it after every change to the browser's local storage; search filters go to session storage, so they last only for the tab. Values are encrypted and signed with ASP.NET Core's data protection keys, which are now kept with the database so drafts stay readable after an update. Drafts expire after 7 days, are cleared on save or cancel, and anything corrupt or out of date is quietly discarded. An edit draft is dropped if the recipe was saved since. The logic sits behind `IDraftStore`, so it's unit-tested without a browser.
+- *Drafts.* Pages with valuable input (recipe form, grocery list) save it after every change to the browser's local storage. Search filters and the cooking view's crossed-off ingredients go to session storage, so they last only for the tab. Crossed-off ingredients are dropped if the recipe has been edited since. Values are encrypted and signed with ASP.NET Core's data protection keys, which are now kept with the database so drafts stay readable after an update. Drafts expire after 7 days, are cleared on save or cancel, and anything corrupt or out of date is quietly discarded. An edit draft is dropped if the recipe was saved since. The logic sits behind `IDraftStore`, so it's unit-tested without a browser.
 - *Longer retention.* Disconnected circuits are kept for 30 minutes instead of 3, so short absences reconnect seamlessly. Each retained circuit holds one tab's page state in server memory, a negligible cost at household scale (capped at 100 circuits).
 
 Alternatives considered:
 - **Blazor WebAssembly or Auto mode** would keep state in the browser and avoid the connection problem entirely, but it means adding an authenticated HTTP API for every operation, downloading the .NET runtime to the phone, and rewriting data access. It's a much larger change, and it still wouldn't survive the phone discarding the tab without the same kind of browser storage. Not worth it for this app.
 - **.NET 10's built-in circuit state persistence** (`[PersistentState]`) restores state after the server evicts a circuit, but not after a reload, a tab discard, or a server restart. Drafts cover all of those with one mechanism. Restoring drafts when a page initializes also covers .NET 10's automatic circuit resume, so the app doesn't need both.
+
+**Mobile-first UI with plain Bootstrap.** The app is mostly used on a phone in the kitchen or the shop, so each page was redesigned for a 390 px screen first. The main pieces:
+- *Bottom navigation* for the four places used most (Recipes, Find, Grocery, More), and a top bar on wider screens. Rarely used pages (Ingredients, Import and export) are under More.
+- *One action per screen in reach of the thumb.* The main button on the grocery list, recipe form, ingredient search, and import sits in a sticky bar above the bottom navigation.
+- *Native `<dialog>` for confirmations.* The browser traps focus, closes it on Escape, and makes the page behind it inert, which hand-built Bootstrap modals didn't do. Less-used actions (edit, delete, merge) are in a "⋯" menu instead of rows of icon buttons.
+- *Plain HTTP in mind.* The Clipboard and Web Share APIs only work over HTTPS, and the app usually runs on plain HTTP at home. Copy falls back to the older select-and-copy method, and Share only appears where it works.
+- *No service worker.* The manifest gives the app a home-screen icon, but there is no offline mode, because Blazor Server can't do anything without its connection to the server.
+- *Bootstrap only, no component library.* The few shared pieces (dialog, menu, filter panel, stepper) are small Razor components with tests, which keeps the dependencies to two vendored files.
 
 **Tags as a comma-separated column.** This keeps the schema small. Tag filtering is done in memory after the database applies the other filters, which is fine for a personal collection. A large catalog would use a separate tags table.
 
@@ -240,13 +260,13 @@ Alternatives considered:
 
 - **No authentication.** Anyone who can reach the app can view, change, or delete every recipe. It's designed for a single household on a trusted home network. Don't expose it to the internet without putting authentication in front of it (for example a reverse proxy with login).
 - **Single-user design.** There are no user accounts or per-user data, and simultaneous edits to the same recipe aren't detected (the last save wins).
-- **No HTTPS inside the container.** The container serves plain HTTP on port 8080. Use a reverse proxy such as Caddy, nginx, or Traefik for HTTPS.
+- **No HTTPS inside the container.** The container serves plain HTTP on port 8080. Use a reverse proxy such as Caddy, nginx, or Traefik for HTTPS. Over plain HTTP the grocery list's Share button is hidden, and Android may open the home-screen icon in a normal browser tab rather than as an app.
 - **Drafts belong to one browser on one device.** They aren't synced, so a recipe started on a phone can't be finished on a laptop until it's saved.
 - **Photos aren't kept in drafts.** They can be up to 10 MB, too much for browser storage, so a photo has to be chosen again after a draft is restored. The notice says so.
 - **The last few keystrokes can be lost** if a phone suspends the page before the field being typed in has sent its value. Everything up to the previous field is kept.
 - **Large pasted imports may fail.** Blazor limits messages from the browser to 32 KB, so pasting more text than that into the import box is likely to disconnect the page. Use the file upload for large imports (up to 1 MB).
 - **Original units aren't kept** (see [Design decisions](#design-decisions)).
-- **No Content Security Policy yet.** Adding one requires, among other things, moving the import page's inline script into a static file.
+- **No Content Security Policy yet.** All scripts are now static files (the import page's inline script was moved), so the remaining work is choosing a policy and testing that Blazor Server's script and connection work under it.
 
 ## Import format
 
