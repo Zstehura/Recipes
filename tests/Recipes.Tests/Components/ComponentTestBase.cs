@@ -31,6 +31,7 @@ public abstract class ComponentTestBase : BunitContext
         Services.AddSingleton<GroceryListService>();
         Services.AddSingleton<RecipeImportExportService>();
         Services.AddSingleton(_ => new IngredientService(Db.CreateContext(), NullLogger<IngredientService>.Instance));
+        Services.AddSingleton(_ => new StapleService(Db.CreateContext(), NullLogger<StapleService>.Instance));
         Services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
     }
 

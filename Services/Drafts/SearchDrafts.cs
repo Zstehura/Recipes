@@ -1,3 +1,5 @@
+using RecipesApp.Services;
+
 namespace RecipesApp.Services.Drafts;
 
 /// <summary>Recipe search filters, shared by the recipe list and the search-by-ingredients page.</summary>
@@ -14,8 +16,14 @@ public sealed record RecipeFilters(
     public const string RecipeListKey = "recipe-list-filters";
 }
 
-/// <summary>The search-by-ingredients page: which ingredients are selected, plus the filters.</summary>
-public sealed record IngredientSearchDraft(List<int> SelectedIngredientIds, RecipeFilters Filters)
+/// <summary>
+/// The search-by-ingredients page: which ingredients are selected, the filters, and how the
+/// ingredients match (drafts saved before there was a choice read as "uses all").
+/// </summary>
+public sealed record IngredientSearchDraft(
+    List<int> SelectedIngredientIds,
+    RecipeFilters Filters,
+    IngredientMatch Match = IngredientMatch.UsesAll)
 {
     public const string Key = "ingredient-search";
 }

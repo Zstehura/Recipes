@@ -290,4 +290,63 @@ public sealed class DatabaseInitializerTests : IDisposable
 
         Directory.GetFiles(Path.GetDirectoryName(path)!, Path.GetFileName(path) + ".backup-*").ShouldBeEmpty();
     }
+
+    // ---------------------------------------------------------------- Staples (upgrade 4)
+
+    private static List<string> StaplesSchema(RecipeDbContext context) =>
+        context.Database
+            .SqlQueryRaw<string>("""SELECT type || ' ' || name || ': ' || sql AS Value FROM sqlite_master WHERE tbl_name = 'Staples' AND sql IS NOT NULL ORDER BY name""")
+            .ToList();
+
+    private static List<string> StapleRows(RecipeDbContext context) =>
+        context.Database.SqlQueryRaw<string>("SELECT Id || ' ' || Name AS Value FROM Staples ORDER BY Id").ToList();
+
+    // A database from before the staples list
+    private static void DropStaples(RecipeDbContext context)
+    {
+        context.Database.EnsureCreated();
+        context.Database.ExecuteSqlRaw("""DROP TABLE "Staples" """);
+    }
+
+    [Fact]
+    public async Task InitializeAsync_DatabaseWithoutStaples_AddsThemExactlyAsANewDatabaseHasThem()
+    {
+        using var fresh = CreateInMemoryContext();
+        await InitializeAsync(fresh);
+        using var old = CreateInMemoryContext();
+        DropStaples(old);
+
+        await InitializeAsync(old);
+
+        StaplesSchema(fresh).ShouldNotBeEmpty();
+        StaplesSchema(old).ShouldBe(StaplesSchema(fresh));
+        StapleRows(old).ShouldBe(StapleRows(fresh));
+        StapleRows(fresh).Count.ShouldBe(RecipeDbContext.DefaultStaples.Length);
+    }
+
+    [Fact]
+    public async Task InitializeAsync_StaplesAlreadyChanged_LeavesThemAlone()
+    {
+        using var context = CreateInMemoryContext();
+        await InitializeAsync(context);
+        context.Database.ExecuteSqlRaw("DELETE FROM Staples");
+
+        await InitializeAsync(context);
+
+        StapleRows(context).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task InitializeAsync_FileDatabaseWithoutStaples_AddsThemWithoutABackup()
+    {
+        var path = NewTempDatabasePath();
+        using (var context = CreateContext($"Data Source={path}"))
+        {
+            DropStaples(context);
+            await InitializeAsync(context);
+            StapleRows(context).Count.ShouldBe(RecipeDbContext.DefaultStaples.Length);
+        }
+
+        Directory.GetFiles(Path.GetDirectoryName(path)!, Path.GetFileName(path) + ".backup-*").ShouldBeEmpty();
+    }
 }

@@ -1,5 +1,6 @@
 using Bunit;
 using RecipesApp.Pages;
+using RecipesApp.Services;
 using RecipesApp.Services.Drafts;
 using Shouldly;
 
@@ -69,5 +70,47 @@ public sealed class SearchFilterDraftTests : ComponentTestBase
         cut.WaitForAssertion(() => cut.Find($"#ingredient-{eggsId}").HasAttribute("checked").ShouldBeTrue());
         cut.FindAll(".recipe-item-title").Select(h => h.TextContent.Trim()).Order()
             .ShouldBe(new[] { "Omelette", "Pancakes" });
+    }
+
+    [Fact]
+    public async Task IngredientSearch_SavedMatch_IsRestored()
+    {
+        Db.SeedRecipe("Omelette", "Eggs", "Salt");
+        Db.SeedRecipe("Frittata", "Eggs", "Cheese");
+        int eggsId;
+        using (var context = Db.CreateContext())
+        {
+            eggsId = context.Ingredients.Single(i => i.Name == "Eggs").Id;
+        }
+        await Drafts.SaveAsync(IngredientSearchDraft.Key, new IngredientSearchDraft(
+            new List<int> { eggsId },
+            new RecipeFilters("", false, null, null, null, null, new List<string>()),
+            IngredientMatch.OnlyThese), DraftLifetime.Tab);
+
+        var cut = Render<SearchByIngredients>();
+
+        cut.WaitForAssertion(() => cut.Find("#match-only-these").HasAttribute("checked").ShouldBeTrue());
+        cut.FindAll(".recipe-item-title").Select(h => h.TextContent.Trim()).ShouldBe(new[] { "Omelette" });
+    }
+
+    [Fact]
+    public void IngredientSearch_DraftFromBeforeTheMatchChoice_UsesAllOfThem()
+    {
+        Db.SeedRecipe("Omelette", "Eggs", "Salt");
+        Db.SeedRecipe("Frittata", "Eggs", "Cheese");
+        int eggsId;
+        using (var context = Db.CreateContext())
+        {
+            eggsId = context.Ingredients.Single(i => i.Name == "Eggs").Id;
+        }
+        // Saved by the previous version, which had no "match" field
+        Store.Values[(DraftLifetime.Tab, IngredientSearchDraft.Key)] =
+            "{\"version\":1,\"savedAt\":\"2026-10-01T12:00:00+00:00\",\"payload\":{\"selectedIngredientIds\":[" + eggsId + "]," +
+            "\"filters\":{\"searchTerm\":\"\",\"showFilters\":false,\"tags\":[]}}}";
+
+        var cut = Render<SearchByIngredients>();
+
+        cut.WaitForAssertion(() => cut.FindAll(".recipe-item-title").Count.ShouldBe(2));
+        cut.Find("#match-uses-all").HasAttribute("checked").ShouldBeTrue();
     }
 }

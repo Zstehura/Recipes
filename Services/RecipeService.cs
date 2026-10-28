@@ -6,6 +6,19 @@ using RecipesApp.Models;
 
 namespace RecipesApp.Services;
 
+/// <summary>How picked ingredients narrow a recipe search.</summary>
+public enum IngredientMatch
+{
+    /// <summary>Recipes that use every picked ingredient ("I have chicken to use up").</summary>
+    UsesAll,
+
+    /// <summary>
+    /// Recipes made from only the picked ingredients plus the staples list, using at least one
+    /// picked ingredient ("what can I make with what I have").
+    /// </summary>
+    OnlyThese,
+}
+
 public class RecipeService : IRecipeReader
 {
     private readonly RecipeDbContext _context;
@@ -192,16 +205,36 @@ public class RecipeService : IRecipeReader
         int? maxCookTime = null,
         List<string>? tags = null,
         int? minServings = null,
-        int? maxServings = null)
+        int? maxServings = null,
+        IngredientMatch match = IngredientMatch.UsesAll)
     {
         var query = RecipesWithIngredients();
 
-        // Filter by ingredients - recipes must contain ALL selected ingredients
         if (ingredientIds != null && ingredientIds.Any())
         {
-            foreach (var ingredientId in ingredientIds)
+            if (match == IngredientMatch.UsesAll)
             {
-                query = query.Where(r => r.RecipeIngredients.Any(ri => ri.IngredientId == ingredientId));
+                // Recipes must contain ALL selected ingredients
+                foreach (var ingredientId in ingredientIds)
+                {
+                    query = query.Where(r => r.RecipeIngredients.Any(ri => ri.IngredientId == ingredientId));
+                }
+            }
+            else
+            {
+                // Staples are matched by name (both columns ignore case), so they count
+                // whichever recipes use them
+                var stapleIds = await _context.Ingredients
+                    .Where(i => _context.Staples.Any(s => s.Name == i.Name))
+                    .Select(i => i.Id)
+                    .ToListAsync();
+                var allowedIds = ingredientIds.Union(stapleIds).ToList();
+
+                // Every line is picked or a staple, and at least one is picked: a recipe of
+                // only staples isn't an answer to "what can I make with these"
+                query = query.Where(r =>
+                    r.RecipeIngredients.All(ri => allowedIds.Contains(ri.IngredientId))
+                    && r.RecipeIngredients.Any(ri => ingredientIds.Contains(ri.IngredientId)));
             }
         }
 

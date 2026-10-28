@@ -3,12 +3,17 @@
 @using RecipesApp.Services
 @inject RecipeService RecipeService
 @inject IngredientService IngredientService
+@inject StapleService StapleService
 @inject DraftService Drafts
 
 <PageTitle>@AppInfo.Title("Find by ingredient")</PageTitle>
 
 <h1 class="h3 mb-2">Find by ingredient</h1>
-<p class="text-muted">Pick ingredients to see the recipes that use all of them.</p>
+<p class="text-muted">
+    @(match == IngredientMatch.UsesAll
+        ? "Pick ingredients to see the recipes that use all of them."
+        : "Pick what you have to see the recipes you can make with it and your staples.")
+</p>
 
 @if (ingredients == null)
 {
@@ -23,6 +28,45 @@ else if (!ingredients.Any())
 }
 else
 {
+    <fieldset class="mb-3">
+        <legend class="visually-hidden">Find recipes that</legend>
+        <div class="btn-group match-mode" role="group">
+            <input type="radio" class="btn-check" name="match" id="match-uses-all"
+                   checked="@(match == IngredientMatch.UsesAll)" @onchange="() => SetMatchAsync(IngredientMatch.UsesAll)" />
+            <label class="btn btn-outline-primary" for="match-uses-all">All of these</label>
+            <input type="radio" class="btn-check" name="match" id="match-only-these"
+                   checked="@(match == IngredientMatch.OnlyThese)" @onchange="() => SetMatchAsync(IngredientMatch.OnlyThese)" />
+            <label class="btn btn-outline-primary" for="match-only-these">Only these</label>
+        </div>
+    </fieldset>
+
+    @if (match == IngredientMatch.OnlyThese)
+    {
+        <details class="form-extras staples mb-3">
+            <summary>Staples you always have <span class="text-muted">(@staples.Count)</span></summary>
+            <p class="text-muted small">Recipes can use these without you picking them.</p>
+            @if (staples.Any())
+            {
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    @foreach (var staple in staples)
+                    {
+                        <button type="button" class="tag-chip" @key="staple.Id" aria-label="@($"Remove staple {staple.Name}")"
+                                @onclick="() => RemoveStapleAsync(staple)">
+                            @staple.Name <span class="bi bi-x-lg" aria-hidden="true"></span>
+                        </button>
+                    }
+                </div>
+            }
+            <form class="d-flex gap-2" @onsubmit="AddStapleAsync">
+                <label for="new-staple" class="visually-hidden">Add a staple</label>
+                <input id="new-staple" class="form-control" placeholder="Add a staple" maxlength="@StapleService.MaxNameLength"
+                       @bind="newStaple" />
+                <button type="submit" class="btn btn-outline-secondary">Add</button>
+            </form>
+            <p class="small mt-2 mb-0" role="status" aria-live="polite">@stapleMessage</p>
+        </details>
+    }
+
     <section class="mb-4" aria-labelledby="picker-heading">
         <h2 id="picker-heading" class="visually-hidden">Ingredients</h2>
 
@@ -102,7 +146,11 @@ else
             else if (!recipes.Any())
             {
                 <div class="empty-state">
-                    <p class="mb-0">No recipe uses all of these. Try removing an ingredient@(HasFilters ? " or clearing the filters" : "").</p>
+                    <p class="mb-0">
+                        @(match == IngredientMatch.UsesAll
+                            ? "No recipe uses all of these. Try removing an ingredient"
+                            : "No recipe is made from only these. Try picking more ingredients")@(HasFilters ? " or clearing the filters" : "").
+                    </p>
                 </div>
             }
             else
@@ -133,6 +181,10 @@ else
 
 @code {
     private List<Ingredient>? ingredients;
+    private IngredientMatch match = IngredientMatch.UsesAll;
+    private List<Staple> staples = new();
+    private string newStaple = string.Empty;
+    private string stapleMessage = string.Empty;
     private List<Recipe>? recipes;
     private HashSet<int> selectedIngredientIds = new();
     private string ingredientFilter = string.Empty;
@@ -159,6 +211,7 @@ else
     {
         ingredients = await IngredientService.GetAllIngredientsAsync();
         availableTags = await RecipeService.GetAllTagsAsync();
+        staples = await StapleService.GetStaplesAsync();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -185,7 +238,8 @@ else
     private IngredientSearchDraft CaptureSearch() => new(
         selectedIngredientIds.Order().ToList(),
         new RecipeFilters(searchTerm, showFilters, filters.MinCookTime, filters.MaxCookTime,
-            filters.MinServings, filters.MaxServings, filters.Tags.Order().ToList()));
+            filters.MinServings, filters.MaxServings, filters.Tags.Order().ToList()),
+        match);
 
     // Kept for this browser tab only (survives a reload, a lost connection, or opening a recipe and coming back)
     private async Task RestoreSearchAsync()
@@ -200,6 +254,7 @@ else
             // Ignore ingredients that no longer exist (deleted or merged since)
             var existingIds = ingredients?.Select(i => i.Id).ToHashSet() ?? new HashSet<int>();
             selectedIngredientIds = draft.Value.SelectedIngredientIds.Where(existingIds.Contains).ToHashSet();
+            match = draft.Value.Match;
             searchTerm = saved.SearchTerm;
             showFilters = saved.ShowFilters;
             filters = new RecipeFilterState
@@ -220,6 +275,43 @@ else
     private void ToggleFilters()
     {
         showFilters = !showFilters;
+    }
+
+    private async Task SetMatchAsync(IngredientMatch newMatch)
+    {
+        match = newMatch;
+        await SearchRecipes();
+    }
+
+    private async Task AddStapleAsync()
+    {
+        var name = IngredientService.NormalizeName(newStaple);
+        var result = await StapleService.AddStapleAsync(newStaple);
+        stapleMessage = result switch
+        {
+            AddStapleResult.Added => $"Added {name}.",
+            AddStapleResult.Empty => "Type a staple to add.",
+            AddStapleResult.TooLong => $"A staple can be at most {StapleService.MaxNameLength} characters.",
+            _ => $"{name} is already a staple.",
+        };
+        if (result == AddStapleResult.Added)
+        {
+            newStaple = string.Empty;
+        }
+        await StaplesChangedAsync();
+    }
+
+    private async Task RemoveStapleAsync(Staple staple)
+    {
+        await StapleService.RemoveStapleAsync(staple.Id);
+        stapleMessage = $"Removed {staple.Name}.";
+        await StaplesChangedAsync();
+    }
+
+    private async Task StaplesChangedAsync()
+    {
+        staples = await StapleService.GetStaplesAsync();
+        await SearchRecipes();
     }
 
     private async Task SetIngredientAsync(int ingredientId, bool selected)
@@ -253,7 +345,8 @@ else
                 maxCookTime: filters.MaxCookTime,
                 tags: filters.Tags.Count > 0 ? filters.Tags.ToList() : null,
                 minServings: filters.MinServings,
-                maxServings: filters.MaxServings
+                maxServings: filters.MaxServings,
+                match: match
             );
         }
         else

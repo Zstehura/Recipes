@@ -13,6 +13,10 @@ public class RecipeDbContext : DbContext
     public DbSet<Recipe> Recipes { get; set; }
     public DbSet<Ingredient> Ingredients { get; set; }
     public DbSet<RecipeIngredient> RecipeIngredients { get; set; }
+    public DbSet<Staple> Staples { get; set; }
+
+    /// <summary>The staples a new database starts with; the cook can change them.</summary>
+    public static readonly string[] DefaultStaples = ["Salt", "Black pepper", "Water", "Olive oil", "Vegetable oil"];
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -60,6 +64,14 @@ public class RecipeDbContext : DbContext
             entity.Property(e => e.Quantity).HasPrecision(18, 4);
             entity.Property(e => e.Unit).HasConversion<string>().HasMaxLength(20);
             entity.Property(e => e.Modifier).HasMaxLength(100);
+        });
+
+        modelBuilder.Entity<Staple>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200).UseCollation("NOCASE");
+            entity.HasIndex(e => e.Name).IsUnique();
+            entity.HasData(DefaultStaples.Select((name, i) => new Staple { Id = i + 1, Name = name }));
         });
     }
 }

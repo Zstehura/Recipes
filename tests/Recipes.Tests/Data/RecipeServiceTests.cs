@@ -658,4 +658,96 @@ public sealed class RecipeServiceTests : IDisposable
 
         Names(results).ShouldBe(Csv(expected));
     }
+
+    // ---------------------------------------------------------------- Made from only these
+
+    // The test database starts with the default staples: Salt, Black pepper, Water, Olive oil, Vegetable oil
+    private void SeedPantryCatalog()
+    {
+        _db.SeedRecipe("Spaghetti", Pieces("Pasta", "Tomato", "Salt", "Olive oil"), cookingTime: 30);
+        _db.SeedRecipe("Omelette", Pieces("Eggs", "Salt"), cookingTime: 10);
+        _db.SeedRecipe("Pancakes", Pieces("Flour", "Eggs", "Milk"), cookingTime: 20);
+        _db.SeedRecipe("Salted water", Pieces("Salt", "Water"), cookingTime: 5);
+        _db.SeedIngredient("Bread");
+    }
+
+    private async Task<List<Recipe>> OnlyThese(string selected, int? maxCookTime = null)
+    {
+        var ids = await IngredientIds(selected.Split(','));
+        return await CreateService().FilterRecipesByIngredientsWithFiltersAsync(
+            ids, maxCookTime: maxCookTime, match: IngredientMatch.OnlyThese);
+    }
+
+    private void SetStaples(params string[] names)
+    {
+        using var context = _db.CreateContext();
+        context.Staples.RemoveRange(context.Staples);
+        context.Staples.AddRange(names.Select(n => new Staple { Name = n }));
+        context.SaveChanges();
+    }
+
+    [Theory]
+    [InlineData("Eggs", "Omelette")]                        // salt is a staple, so it needn't be picked
+    [InlineData("Pasta,Tomato", "Spaghetti")]               // salt and olive oil are staples
+    [InlineData("Pasta", "")]                               // tomato is missing and isn't a staple
+    [InlineData("Eggs,Flour", "Omelette")]                  // pancakes still need milk
+    [InlineData("Eggs,Flour,Milk", "Omelette,Pancakes")]    // picking more than a recipe needs is fine
+    [InlineData("Salt", "Salted water")]                    // a picked staple counts as picked
+    [InlineData("Bread", "")]                               // a recipe of only staples needs one picked
+    public async Task OnlyThese_WithStaples_ReturnsRecipesMadeFromPickedAndStaples(string selected, string expected)
+    {
+        SeedPantryCatalog();
+
+        Names(await OnlyThese(selected)).ShouldBe(Csv(expected));
+    }
+
+    [Theory]
+    [InlineData("Eggs", "")]
+    [InlineData("Pasta,Tomato", "")]
+    [InlineData("Eggs,Salt", "Omelette")]
+    [InlineData("Pasta,Tomato,Salt,Olive oil", "Spaghetti")]
+    public async Task OnlyThese_NoStaples_EveryIngredientMustBePicked(string selected, string expected)
+    {
+        SeedPantryCatalog();
+        SetStaples();
+
+        Names(await OnlyThese(selected)).ShouldBe(Csv(expected));
+    }
+
+    [Fact]
+    public async Task OnlyThese_StapleNames_MatchIngredientsWhateverTheCase()
+    {
+        SeedPantryCatalog();
+        SetStaples("SALT");
+
+        Names(await OnlyThese("Eggs")).ShouldBe(new[] { "Omelette" });
+    }
+
+    [Fact]
+    public async Task OnlyThese_RecipeWithNoIngredients_IsNotAMatch()
+    {
+        SeedPantryCatalog();
+        _db.SeedRecipe("Mystery", Array.Empty<string>());
+
+        Names(await OnlyThese("Eggs,Flour,Milk,Pasta,Tomato")).ShouldBe(new[] { "Omelette", "Pancakes", "Spaghetti" });
+    }
+
+    [Fact]
+    public async Task OnlyThese_WithOtherFilters_AppliesThemToo()
+    {
+        SeedPantryCatalog();
+
+        Names(await OnlyThese("Eggs,Flour,Milk", maxCookTime: 15)).ShouldBe(new[] { "Omelette" });
+    }
+
+    [Fact]
+    public async Task UsesAll_IgnoresStaples()
+    {
+        SeedPantryCatalog();
+        var eggs = await IngredientIds("Eggs");
+
+        var results = await CreateService().FilterRecipesByIngredientsWithFiltersAsync(eggs, match: IngredientMatch.UsesAll);
+
+        Names(results).ShouldBe(new[] { "Omelette", "Pancakes" });
+    }
 }

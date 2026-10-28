@@ -158,4 +158,95 @@ public sealed class SearchByIngredientsTests : ComponentTestBase
             cut.FindAll($"label[for='{id}']").Count.ShouldBe(1, $"#{id} has no label");
         }
     }
+
+    // ---------------------------------------------------------------- Made from only these
+
+    private static string[] StapleChips(IRenderedComponent<SearchByIngredients> cut) =>
+        cut.FindAll(".staples .tag-chip").Select(c => c.TextContent.Trim()).ToArray();
+
+    [Fact]
+    public void UsesAllOfThese_IsTheDefault_AndHidesTheStaples()
+    {
+        Db.SeedRecipe("Omelette", "Eggs", "Salt");
+
+        var cut = Render<SearchByIngredients>();
+
+        cut.Find("#match-uses-all").HasAttribute("checked").ShouldBeTrue();
+        cut.FindAll(".staples").ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void MadeFromOnlyThese_ShowsRecipesThatNeedNothingElseButStaples()
+    {
+        Db.SeedRecipe("Omelette", "Eggs", "Salt");
+        Db.SeedRecipe("Frittata", "Eggs", "Cheese");
+        var cut = Render<SearchByIngredients>();
+        cut.Find($"#ingredient-{IngredientId("Eggs")}").Change(true);
+        cut.WaitForAssertion(() => Results(cut).ShouldBe(new[] { "Frittata", "Omelette" }));
+
+        cut.Find("#match-only-these").Change(true);
+
+        cut.WaitForAssertion(() => Results(cut).ShouldBe(new[] { "Omelette" }));
+        cut.Find("p.text-muted").TextContent.ShouldContain("you can make");
+        StapleChips(cut).ShouldContain("Salt");
+    }
+
+    [Fact]
+    public void MadeFromOnlyThese_NoMatch_SuggestsPickingMore()
+    {
+        Db.SeedRecipe("Frittata", "Eggs", "Cheese");
+        var cut = Render<SearchByIngredients>();
+        cut.Find("#match-only-these").Change(true);
+
+        cut.Find($"#ingredient-{IngredientId("Eggs")}").Change(true);
+
+        cut.WaitForAssertion(() => cut.Find(".empty-state").TextContent.ShouldContain("Try picking more ingredients"));
+    }
+
+    [Fact]
+    public void RemovingAStaple_UpdatesTheResults()
+    {
+        Db.SeedRecipe("Omelette", "Eggs", "Salt");
+        var cut = Render<SearchByIngredients>();
+        cut.Find("#match-only-these").Change(true);
+        cut.Find($"#ingredient-{IngredientId("Eggs")}").Change(true);
+        cut.WaitForAssertion(() => Results(cut).ShouldBe(new[] { "Omelette" }));
+
+        cut.Find("button[aria-label='Remove staple Salt']").Click();
+
+        cut.WaitForAssertion(() => Results(cut).ShouldBeEmpty());
+        StapleChips(cut).ShouldNotContain("Salt");
+        cut.Find(".staples [role=status]").TextContent.ShouldBe("Removed Salt.");
+    }
+
+    [Fact]
+    public void AddingAStaple_UpdatesTheResults()
+    {
+        Db.SeedRecipe("Frittata", "Eggs", "Cheese");
+        var cut = Render<SearchByIngredients>();
+        cut.Find("#match-only-these").Change(true);
+        cut.Find($"#ingredient-{IngredientId("Eggs")}").Change(true);
+
+        cut.Find("#new-staple").Change("cheese");
+        cut.Find(".staples form").Submit();
+
+        cut.WaitForAssertion(() => Results(cut).ShouldBe(new[] { "Frittata" }));
+        StapleChips(cut).ShouldContain("Cheese");
+        cut.Find("#new-staple").GetAttribute("value").ShouldBe(string.Empty);
+        cut.Find(".staples summary").TextContent.ShouldContain("(6)");
+    }
+
+    [Fact]
+    public void AddingAStapleTwice_SaysItIsAlreadyListed()
+    {
+        Db.SeedRecipe("Omelette", "Eggs", "Salt");
+        var cut = Render<SearchByIngredients>();
+        cut.Find("#match-only-these").Change(true);
+
+        cut.Find("#new-staple").Change("salt");
+        cut.Find(".staples form").Submit();
+
+        cut.WaitForAssertion(() => cut.Find(".staples [role=status]").TextContent.ShouldBe("Salt is already a staple."));
+        cut.Find("#new-staple").GetAttribute("value").ShouldBe("salt");
+    }
 }

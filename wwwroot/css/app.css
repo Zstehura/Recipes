@@ -883,6 +883,40 @@ h1:focus {
 }
 
 /* Search by ingredients (Pages/SearchByIngredients.razor) */
+/* "Use all of these" / "Made from only these" switch (Pages/SearchByIngredients.razor) */
+.match-mode {
+    display: flex;
+    width: 100%;
+    max-width: 30rem;
+}
+
+.match-mode .btn {
+    flex: 1 1 0;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Stays side by side on phones, where other button groups stack (see "Mobile-friendly buttons") */
+.btn-group.match-mode {
+    flex-direction: row;
+}
+
+.btn-group.match-mode > .btn {
+    margin-bottom: 0;
+}
+
+.btn-group.match-mode > label:first-of-type {
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+}
+
+.btn-group.match-mode > label:last-of-type {
+    border-top-left-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
+}
+
 .ingredient-picker {
     max-height: 50vh;
     margin: 0 0 0.5rem;

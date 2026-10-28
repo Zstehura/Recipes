@@ -27,6 +27,7 @@ public static class DatabaseInitializer
             await AddModifierColumnIfMissingAsync(connection, logger);
             await AddRecipeIngredientIdIfMissingAsync(connection, backup, logger);
             await StoreUnitsByNameAsync(connection, backup, logger);
+            await AddStaplesTableIfMissingAsync(connection, logger);
         }
         finally
         {
@@ -110,6 +111,43 @@ public static class DatabaseInitializer
             """);
     }
 
+    // Upgrade 4: the staples list for the "made from only these" search. A new table only, so
+    // nothing existing changes and no backup is needed. Starts with the same staples as a new
+    // database.
+    private static async Task AddStaplesTableIfMissingAsync(DbConnection connection, ILogger logger)
+    {
+        await using (var check = connection.CreateCommand())
+        {
+            check.CommandText = "SELECT EXISTS (SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'Staples')";
+            if (Convert.ToInt64(await check.ExecuteScalarAsync()) == 1)
+                return;
+        }
+
+        logger.LogInformation("Upgrading database: adding the Staples table");
+        await using var transaction = await connection.BeginTransactionAsync();
+
+        // Must match what EnsureCreated produces for a new database (verified by tests)
+        await ExecuteAsync(connection, transaction, """
+            CREATE TABLE "Staples" (
+                "Id" INTEGER NOT NULL CONSTRAINT "PK_Staples" PRIMARY KEY AUTOINCREMENT,
+                "Name" TEXT COLLATE NOCASE NOT NULL
+            )
+            """);
+        await ExecuteAsync(connection, transaction, """CREATE UNIQUE INDEX "IX_Staples_Name" ON "Staples" ("Name")""");
+
+        for (var i = 0; i < RecipeDbContext.DefaultStaples.Length; i++)
+        {
+            await using var insert = connection.CreateCommand();
+            insert.Transaction = transaction;
+            insert.CommandText = "INSERT INTO Staples (Id, Name) VALUES ($id, $name)";
+            AddParameter(insert, "$id", i + 1);
+            AddParameter(insert, "$name", RecipeDbContext.DefaultStaples[i]);
+            await insert.ExecuteNonQueryAsync();
+        }
+
+        await transaction.CommitAsync();
+    }
+
     /// <summary>
     /// Backs the database up before the first upgrade step that changes it, and only once per
     /// startup, however many steps run.
@@ -140,10 +178,7 @@ public static class DatabaseInitializer
         var backupPath = $"{databasePath}.backup-{DateTime.Now:yyyyMMdd-HHmmss}";
         await using var command = connection.CreateCommand();
         command.CommandText = "VACUUM INTO $path";
-        var parameter = command.CreateParameter();
-        parameter.ParameterName = "$path";
-        parameter.Value = backupPath;
-        command.Parameters.Add(parameter);
+        AddParameter(command, "$path", backupPath);
         await command.ExecuteNonQueryAsync();
 
         logger.LogInformation("Database backed up to {BackupPath}", backupPath);
@@ -161,6 +196,14 @@ public static class DatabaseInitializer
                 return true;
         }
         return false;
+    }
+
+    private static void AddParameter(DbCommand command, string name, object value)
+    {
+        var parameter = command.CreateParameter();
+        parameter.ParameterName = name;
+        parameter.Value = value;
+        command.Parameters.Add(parameter);
     }
 
     private static async Task ExecuteAsync(DbConnection connection, DbTransaction? transaction, string sql)
